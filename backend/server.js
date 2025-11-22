@@ -50,7 +50,7 @@ app.use(helmet({
       styleSrc: ["'self'", "'unsafe-inline'"],
       scriptSrc: ["'self'"],
       imgSrc: ["'self'", "data:", "http:", "https:", "blob:"],
-      connectSrc: ["'self'", "http://localhost:*", "https://localhost:*", "http://192.168.1.109:*", "https://192.168.1.109:*"],
+      connectSrc: ["'self'", "http://localhost:*", "https://localhost:*"],
     },
   },
   crossOriginResourcePolicy: { policy: "cross-origin" }
@@ -80,12 +80,34 @@ app.use(session({
 }));
 
 // CORS configuration
+const allowedOrigins = [
+  process.env.FRONTEND_URL || 'http://192.168.1.109:3000',
+  'http://192.168.1.109:3000',
+  'http://192.168.1.109:4002',
+  'http://localhost',
+  'http://localhost:3000',
+  'http://localhost:4002'
+];
+
+// Add production domain if specified
+if (process.env.PRODUCTION_DOMAIN) {
+  allowedOrigins.push(`http://${process.env.PRODUCTION_DOMAIN}`);
+  allowedOrigins.push(`https://${process.env.PRODUCTION_DOMAIN}`);
+  allowedOrigins.push(`http://www.${process.env.PRODUCTION_DOMAIN}`);
+  allowedOrigins.push(`https://www.${process.env.PRODUCTION_DOMAIN}`);
+}
+
 app.use(cors({
-  origin: [
-    process.env.FRONTEND_URL || 'http://localhost:5174',
-    'http://localhost:5174',
-    'http://localhost:4002'
-  ],
+  origin: function (origin, callback) {
+    // Allow requests with no origin (mobile apps, Postman, curl, etc.)
+    if (!origin) return callback(null, true);
+    
+    if (allowedOrigins.indexOf(origin) !== -1 || process.env.NODE_ENV === 'development') {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Request-ID', 'Cache-Control']
@@ -448,20 +470,35 @@ app.use('/api/expenses', expensesRoutes);
 app.use('/api/restore', restoreRoutes);
 app.use('/api/audit', auditRoutes);
 
-// Serve the frontend for any non-API routes
-// Frontend serving route - DISABLED IN DEVELOPMENT
-// app.get('*', (req, res) => {
-//   // Don't serve frontend for API routes
-//   if (req.path.startsWith('/api/')) {
-//     return res.status(404).json({
-//       success: false,
-//       error: 'API route not found'
-//     });
-//   }
-//   
-//   // Serve the frontend index.html for all other routes
-//   res.sendFile(path.join(frontendPath, 'index.html'));
-// });
+// 404 handler for undefined API routes (must come AFTER all API routes)
+app.use('/api/*', (req, res) => {
+  res.status(404).json({
+    success: false,
+    error: 'API endpoint not found',
+    path: req.originalUrl,
+    method: req.method
+  });
+});
+
+// Root API endpoint info
+app.get('/api', (req, res) => {
+  res.json({
+    success: true,
+    message: 'Property Management API',
+    version: '1.0.0',
+    endpoints: {
+      auth: '/api/auth',
+      admins: '/api/admins',
+      properties: '/api/properties',
+      tenants: '/api/tenants',
+      bills: '/api/bills',
+      analytics: '/api/analytics',
+      expenses: '/api/expenses',
+      restore: '/api/restore',
+      audit: '/api/audit'
+    }
+  });
+});
 
 // Global error handler with improved multi-user support
 app.use((error, req, res, next) => {
@@ -591,14 +628,16 @@ const startServer = async () => {
     cronService.initialize();
 
     // Lock to the specified PORT; fail fast if in use
-    const server = app.listen(Number(PORT), '0.0.0.0', () => {
+    // Bind to 0.0.0.0 in production for Nginx proxy, localhost in development
+    const bindAddress = process.env.NODE_ENV === 'production' ? '0.0.0.0' : 'localhost';
+    const server = app.listen(Number(PORT), bindAddress, () => {
       console.log('========================================');
       console.log('🚀 Property Management API Server');
       console.log('========================================');
       console.log(`📍 Status: Running`);
       console.log(`🔗 URL: http://192.168.1.109:${PORT}`);
       console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
-      console.log(`🎯 Frontend URL: ${process.env.FRONTEND_URL || 'http://192.168.1.109:80'}`);  
+      console.log(`🎯 Frontend URL: ${process.env.FRONTEND_URL || 'http://192.168.1.109:3000'}`);  
       console.log(`💾 Database Pool: Max ${process.env.NODE_ENV === 'production' ? '50' : '20'} connections`);
       console.log(`⚡ Rate Limit: ${process.env.RATE_LIMIT_MAX_REQUESTS || '2000'} requests per 15 minutes`);
       console.log('🔧 Multi-user support: ENABLED');

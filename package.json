@@ -1,0 +1,26 @@
+{
+  "name": "france-management",
+  "version": "1.0.0",
+  "description": "Property Management System - Full Stack Application",
+  "private": true,
+  "scripts": {
+    "start": "echo Please specify frontend or backend: && echo   npm run start:backend && echo   npm run start:frontend",
+    "start:backend": "cd backend && npm start",
+    "start:frontend": "cd frontend && npm start",
+    "dev:backend": "cd backend && npm run dev",
+    "dev:frontend": "cd frontend && npm run dev",
+    "build:frontend": "cd frontend && npm run build",
+    "install:all": "npm install && cd backend && npm install && cd ../frontend && npm install",
+    "install:backend": "cd backend && npm install",
+    "install:frontend": "cd frontend && npm install"
+  },
+  "keywords": [
+    "property-management",
+    "full-stack",
+    "react",
+    "express",
+    "sequelize"
+  ],
+  "author": "Property Management Team",
+  "license": "MIT"
+}
