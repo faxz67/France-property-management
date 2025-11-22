@@ -38,12 +38,19 @@ const Expense = sequelize.define('Expense', {
   notes: {
     type: DataTypes.TEXT,
     allowNull: true
+  },
+  deleted_at: {
+    type: DataTypes.DATE,
+    allowNull: true,
+    defaultValue: null
   }
 }, {
   tableName: 'expenses',
   timestamps: true,
   createdAt: 'created_at',
   updatedAt: 'updated_at',
+  paranoid: true, // Enable soft delete
+  deletedAt: 'deleted_at',
   indexes: [
     { fields: ['property_id'] },
     { fields: ['admin_id'] },

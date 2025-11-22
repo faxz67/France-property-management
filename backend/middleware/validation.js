@@ -4,9 +4,10 @@ const { body, param, query, validationResult } = require('express-validator');
 const handleValidationErrors = (req, res, next) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
+    const errorMessages = errors.array().map(err => err.msg || err.message || `${err.param}: ${err.msg}`).join(', ');
     return res.status(400).json({
       success: false,
-      error: 'Validation failed',
+      error: `Validation failed: ${errorMessages}`,
       details: errors.array()
     });
   }
@@ -77,51 +78,148 @@ const validateAdminUpdate = [
 // Property validation rules
 const validateProperty = [
   body('title')
+    .notEmpty({ ignore_whitespace: true })
+    .withMessage('Title is required')
     .trim()
     .isLength({ min: 3, max: 255 })
     .withMessage('Title must be between 3 and 255 characters'),
   
   body('description')
-    .optional()
+    .optional({ checkFalsy: true })
+    .trim()
     .isLength({ max: 2000 })
     .withMessage('Description must not exceed 2000 characters'),
   
   body('address')
+    .notEmpty({ ignore_whitespace: true })
+    .withMessage('Address is required')
     .trim()
     .isLength({ min: 5, max: 500 })
     .withMessage('Address must be between 5 and 500 characters'),
   
   body('city')
+    .notEmpty({ ignore_whitespace: true })
+    .withMessage('City is required')
     .trim()
     .isLength({ min: 2, max: 100 })
     .withMessage('City must be between 2 and 100 characters'),
   
   body('state')
-    .optional()
+    .optional({ checkFalsy: true })
     .trim()
     .isLength({ min: 2, max: 100 })
     .withMessage('State must be between 2 and 100 characters'),
   
   body('postal_code')
-    .optional()
+    .notEmpty({ ignore_whitespace: true })
+    .withMessage('Postal code is required')
     .trim()
     .isLength({ min: 3, max: 20 })
     .withMessage('Postal code must be between 3 and 20 characters'),
   
   body('country')
+    .optional({ checkFalsy: true })
     .trim()
     .isLength({ min: 2, max: 100 })
     .withMessage('Country must be between 2 and 100 characters'),
   
   body('property_type')
-    .optional()
-    .isIn(['APARTMENT', 'HOUSE', 'CONDO', 'STUDIO', 'OTHER'])
-    .withMessage('Property type must be one of: APARTMENT, HOUSE, CONDO, STUDIO, OTHER'),
+    .notEmpty({ ignore_whitespace: true })
+    .withMessage('Property type is required')
+    .isIn(['APARTMENT', 'HOUSE', 'STUDIO', 'OTHER'])
+    .withMessage('Property type must be one of: APARTMENT, HOUSE, STUDIO, OTHER'),
   
   body('monthly_rent')
     .optional()
-    .isFloat({ min: 0, max: 1000000 })
-    .withMessage('Monthly rent must be between 0 and 1,000,000'),
+    .custom((value) => {
+      // Skip validation if field is empty, null, or undefined
+      if (value === '' || value === null || value === undefined) {
+        return true;
+      }
+      const num = parseFloat(value);
+      if (isNaN(num) || num < 0 || num > 1000000) {
+        throw new Error('Monthly rent must be between 0 and 1,000,000');
+      }
+      return true;
+    }),
+  
+  body('number_of_halls')
+    .optional()
+    .custom((value) => {
+      if (value === '' || value === null || value === undefined) {
+        return true;
+      }
+      const num = parseInt(value, 10);
+      if (isNaN(num) || num < 0) {
+        throw new Error('Number of halls must be a non-negative integer');
+      }
+      return true;
+    }),
+  
+  body('number_of_kitchens')
+    .optional()
+    .custom((value) => {
+      if (value === '' || value === null || value === undefined) {
+        return true;
+      }
+      const num = parseInt(value, 10);
+      if (isNaN(num) || num < 0) {
+        throw new Error('Number of kitchens must be a non-negative integer');
+      }
+      return true;
+    }),
+  
+  body('number_of_bathrooms')
+    .optional()
+    .custom((value) => {
+      if (value === '' || value === null || value === undefined) {
+        return true;
+      }
+      const num = parseInt(value, 10);
+      if (isNaN(num) || num < 0) {
+        throw new Error('Number of bathrooms must be a non-negative integer');
+      }
+      return true;
+    }),
+  
+  body('number_of_parking_spaces')
+    .optional()
+    .custom((value) => {
+      if (value === '' || value === null || value === undefined) {
+        return true;
+      }
+      const num = parseInt(value, 10);
+      if (isNaN(num) || num < 0) {
+        throw new Error('Number of parking spaces must be a non-negative integer');
+      }
+      return true;
+    }),
+  
+  body('number_of_rooms')
+    .optional()
+    .custom((value) => {
+      if (value === '' || value === null || value === undefined) {
+        return true;
+      }
+      const num = parseInt(value, 10);
+      if (isNaN(num) || num < 0) {
+        throw new Error('Number of rooms must be a non-negative integer');
+      }
+      return true;
+    }),
+  
+  body('number_of_gardens')
+    .optional()
+    .custom((value) => {
+      if (value === '' || value === null || value === undefined) {
+        return true;
+      }
+      const num = parseInt(value, 10);
+      if (isNaN(num) || num < 0) {
+        throw new Error('Number of gardens must be a non-negative integer');
+      }
+      return true;
+    }),
   
   handleValidationErrors
 ];
@@ -144,6 +242,12 @@ const validateTenant = [
     .trim()
     .isLength({ min: 10, max: 50 })
     .withMessage('Phone must be between 10 and 50 characters'),
+  
+  body('address')
+    .optional()
+    .trim()
+    .isLength({ max: 500 })
+    .withMessage('Address must not exceed 500 characters'),
   
   body('property_id')
     .isInt({ min: 1 })

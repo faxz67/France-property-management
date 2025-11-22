@@ -11,12 +11,13 @@ const {
   deleteProperty,
   getPropertyStats
 } = require('../controllers/propertyController');
+const propertyPhotoController = require('../controllers/propertyPhotoController');
 const {
-  uploadPropertyPhotos: uploadPhotosController,
   getPropertyPhotos,
   deletePropertyPhoto,
   setPrimaryPhoto
-} = require('../controllers/propertyPhotoController');
+} = propertyPhotoController;
+const uploadPhotosController = propertyPhotoController.uploadPropertyPhotos;
 const { verifyToken, isAdmin } = require('../middleware/auth');
 const { 
   validateProperty, 
@@ -24,9 +25,10 @@ const {
   validatePagination 
 } = require('../middleware/validation');
 const { uploadPropertyPhotos } = require('../utils/fileUpload');
+const { validateFileUpload } = require('../middleware/security');
 
-// Ensure uploads directory exists
-const uploadsDir = path.join(__dirname, '..', 'uploads');
+// Ensure uploads directory exists (use public/uploads to match server static serving)
+const uploadsDir = path.join(__dirname, '..', 'public', 'uploads');
 try {
   if (!fs.existsSync(uploadsDir)) {
     fs.mkdirSync(uploadsDir, { recursive: true });
@@ -36,12 +38,28 @@ try {
 // Configure multer for file uploads (disk storage)
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, uploadsDir);
+    // Ensure directory exists
+    try {
+      if (!fs.existsSync(uploadsDir)) {
+        fs.mkdirSync(uploadsDir, { recursive: true });
+      }
+      cb(null, uploadsDir);
+    } catch (error) {
+      console.error('Error creating uploads directory:', error);
+      cb(error, null);
+    }
   },
   filename: (req, file, cb) => {
     const safeName = file.originalname.replace(/[^a-zA-Z0-9._-]/g, '_');
     const unique = Date.now() + '-' + Math.round(Math.random() * 1e9);
-    cb(null, unique + '-' + safeName);
+    const filename = `${unique}-${safeName}`;
+    console.log('📤 Saving file:', {
+      originalName: file.originalname,
+      safeName: safeName,
+      filename: filename,
+      destination: uploadsDir
+    });
+    cb(null, filename);
   }
 });
 
@@ -64,8 +82,8 @@ router.use(verifyToken, isAdmin);
 router.get('/', validatePagination, getAllProperties);
 router.get('/stats', getPropertyStats);
 router.get('/:id', validateId, getPropertyById);
-router.post('/', upload.single('photo'), validateProperty, createProperty);
-router.put('/:id', upload.single('photo'), validateId, validateProperty, updateProperty);
+router.post('/', upload.single('photo'), validateFileUpload(['image/jpeg', 'image/png', 'image/jpg']), validateProperty, createProperty);
+router.put('/:id', upload.single('photo'), validateFileUpload(['image/jpeg', 'image/png', 'image/jpg']), validateId, validateProperty, updateProperty);
 router.delete('/:id', validateId, deleteProperty);
 
 // Property photos routes

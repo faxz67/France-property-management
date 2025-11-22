@@ -90,9 +90,9 @@ async function overview(req, res) {
     const series = {
       incomeByMonth: months.map((m) => ({ month: m, amount: Number(incomeByMonth[m].toFixed(2)) })),
       expensesByMonth: months.map((m) => ({ month: m, amount: Number(expensesByMonth[m].toFixed(2)) })),
-      // Profit defined as rental income only (no expense subtraction)
-      profitByMonth: months.map((m) => ({ month: m, amount: Number((incomeByMonth[m]).toFixed(2)) })),
-      netProfitByMonth: months.map((m) => ({ month: m, amount: Number((incomeByMonth[m]).toFixed(2)) })),
+      // Net profit = income - expenses
+      profitByMonth: months.map((m) => ({ month: m, amount: Number((incomeByMonth[m] - expensesByMonth[m]).toFixed(2)) })),
+      netProfitByMonth: months.map((m) => ({ month: m, amount: Number((incomeByMonth[m] - expensesByMonth[m]).toFixed(2)) })),
       budgetVsActualByMonth: months.map((m) => ({
         month: m,
         budgetedIncome: Number((budgetIncomeByMonth[m] || 0).toFixed(2)),
@@ -102,10 +102,12 @@ async function overview(req, res) {
       }))
     };
 
-    // Optional per-property breakdown
+    // Per-property breakdown (always calculate for chart display)
     let perProperty = undefined;
-    if (!aggregate) {
+    // Calculate per-property data even when aggregate is true (for chart display)
+    if (selectedPropertyIds.length > 0) {
       const byProp = new Map();
+      // Initialize all selected properties
       for (const pid of selectedPropertyIds) {
         byProp.set(pid, {
           income: Object.fromEntries(months.map(m => [m, 0])),
@@ -113,6 +115,28 @@ async function overview(req, res) {
           bInc: Object.fromEntries(months.map(m => [m, 0])),
           bExp: Object.fromEntries(months.map(m => [m, 0]))
         });
+      }
+      
+      // Also initialize properties found in bills/expenses (in case some are missing from selection)
+      for (const b of bills) {
+        if (b.property_id && !byProp.has(b.property_id)) {
+          byProp.set(b.property_id, {
+            income: Object.fromEntries(months.map(m => [m, 0])),
+            expenses: Object.fromEntries(months.map(m => [m, 0])),
+            bInc: Object.fromEntries(months.map(m => [m, 0])),
+            bExp: Object.fromEntries(months.map(m => [m, 0]))
+          });
+        }
+      }
+      for (const e of expenses) {
+        if (e.property_id && !byProp.has(e.property_id)) {
+          byProp.set(e.property_id, {
+            income: Object.fromEntries(months.map(m => [m, 0])),
+            expenses: Object.fromEntries(months.map(m => [m, 0])),
+            bInc: Object.fromEntries(months.map(m => [m, 0])),
+            bExp: Object.fromEntries(months.map(m => [m, 0]))
+          });
+        }
       }
       for (const b of bills) {
         const group = byProp.get(b.property_id);
@@ -135,10 +159,21 @@ async function overview(req, res) {
       }
       perProperty = {};
       for (const [pid, group] of byProp.entries()) {
+        // Calculate net profit per month (income - expenses)
+        const netProfitByMonth = months.map(m => {
+          const income = group.income[m] || 0;
+          const expenses = group.expenses[m] || 0;
+          return { month: m, amount: Number((income - expenses).toFixed(2)) };
+        });
+        
+        // Calculate total profit for this property
+        const totalProfit = netProfitByMonth.reduce((sum, item) => sum + item.amount, 0);
+        
         perProperty[pid] = {
           incomeByMonth: months.map(m => ({ month: m, amount: Number(group.income[m].toFixed(2)) })),
           expensesByMonth: months.map(m => ({ month: m, amount: Number(group.expenses[m].toFixed(2)) })),
-          netProfitByMonth: months.map(m => ({ month: m, amount: Number(group.income[m].toFixed(2)) })),
+          netProfitByMonth: netProfitByMonth,
+          totalProfit: Number(totalProfit.toFixed(2)),
           budgetVsActualByMonth: months.map(m => ({
             month: m,
             budgetedIncome: Number(group.bInc[m].toFixed(2)),
@@ -159,8 +194,8 @@ async function overview(req, res) {
 
     const totalIncome = series.incomeByMonth.reduce((s, v) => s + v.amount, 0);
     const totalExpenses = series.expensesByMonth.reduce((s, v) => s + v.amount, 0);
-    // Profit equals rental income only
-    const profit = totalIncome;
+    // Net profit = income - expenses
+    const profit = totalIncome - totalExpenses;
     // Budget variance totals (Actual − Budget)
     const totalBudgetedIncome = months.reduce((s,m)=> s + (budgetIncomeByMonth[m]||0), 0);
     const totalBudgetedExpenses = months.reduce((s,m)=> s + (budgetExpenseByMonth[m]||0), 0);

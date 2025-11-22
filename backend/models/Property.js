@@ -57,25 +57,25 @@ const Property = sequelize.define('Property', {
   },
   postal_code: {
     type: DataTypes.STRING(20),
-    allowNull: true,
+    allowNull: false,
     validate: {
+      notEmpty: true,
       len: [3, 20]
     }
   },
   country: {
     type: DataTypes.STRING(100),
-    allowNull: false,
+    allowNull: true,
     validate: {
-      notEmpty: true,
       len: [2, 100]
     }
   },
   property_type: {
-    type: DataTypes.ENUM('APARTMENT', 'HOUSE', 'CONDO', 'STUDIO', 'OTHER'),
+    type: DataTypes.ENUM('APARTMENT', 'HOUSE', 'STUDIO', 'OTHER'),
     allowNull: false,
     defaultValue: 'APARTMENT',
     validate: {
-      isIn: [['APARTMENT', 'HOUSE', 'CONDO', 'STUDIO', 'OTHER']]
+      isIn: [['APARTMENT', 'HOUSE', 'STUDIO', 'OTHER']]
     }
   },
   monthly_rent: {
@@ -119,12 +119,19 @@ const Property = sequelize.define('Property', {
     type: DataTypes.INTEGER,
     allowNull: true,
     validate: { min: 0 }
+  },
+  deleted_at: {
+    type: DataTypes.DATE,
+    allowNull: true,
+    defaultValue: null
   }
 }, {
   tableName: 'properties',
   timestamps: true,
   createdAt: 'created_at',
   updatedAt: 'updated_at',
+  paranoid: true, // Enable soft delete
+  deletedAt: 'deleted_at',
   indexes: [
     {
       fields: ['admin_id']
@@ -133,7 +140,7 @@ const Property = sequelize.define('Property', {
       fields: ['property_type']
     },
     {
-      fields: ['city', 'country']
+      fields: ['city', 'postal_code']
     }
   ]
 });

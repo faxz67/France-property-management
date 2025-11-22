@@ -186,23 +186,32 @@ const deleteFile = (filePath) => {
  * @returns {string} Full file URL
  */
 const getFileUrl = (filePath, req) => {
-  // Use 192.168.1.109:4002 by default, or BACKEND_ORIGIN if provided
-  const origin = process.env.BACKEND_ORIGIN || 'http://192.168.1.109:4002';
-  
-  // Remove 'public/' prefix if present, as Express serves from public directory
-  let urlPath = filePath.replace(/^public[\\/]/, '');
+  // Get origin from request or environment variable
+  const origin = process.env.BACKEND_ORIGIN || 
+                 (req ? `${req.protocol}://${req.get('host')}` : 'http://192.168.1.109:4002');
   
   // Normalize path separators to forward slashes
-  urlPath = urlPath.replace(/\\/g, '/');
+  let urlPath = filePath.replace(/\\/g, '/');
+  
+  // Remove 'public/' prefix if present, as Express serves from public directory
+  urlPath = urlPath.replace(/^public[\\/]/, '');
   
   // Remove any leading slashes
   urlPath = urlPath.replace(/^\/+/, '');
   
-  // Remove 'uploads/' prefix if it exists to avoid duplication
-  urlPath = urlPath.replace(/^uploads\//, '');
+  // If the path already starts with 'uploads/', use it as is
+  // Otherwise, add 'uploads/' prefix
+  if (!urlPath.startsWith('uploads/')) {
+    // Extract just the filename if path contains 'uploads'
+    if (urlPath.includes('uploads/')) {
+      urlPath = urlPath.split('uploads/')[1];
+    }
+    // Ensure we have the uploads prefix
+    urlPath = `uploads/${urlPath}`;
+  }
   
-  // Construct final URL with /uploads prefix
-  const finalUrl = `${origin}/uploads/${urlPath}`;
+  // Construct final URL
+  const finalUrl = `${origin}/${urlPath}`;
   
   console.log(`🔧 getFileUrl: "${filePath}" => "${finalUrl}"`);
   

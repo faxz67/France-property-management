@@ -79,7 +79,7 @@ const Bill = sequelize.define('Bill', {
   },
   due_date: {
     type: DataTypes.DATEONLY,
-    allowNull: false,
+    allowNull: true,
     validate: {
       isDate: true
     }
@@ -122,12 +122,19 @@ const Bill = sequelize.define('Bill', {
   pdf_path: {
     type: DataTypes.STRING(500),
     allowNull: true
+  },
+  deleted_at: {
+    type: DataTypes.DATE,
+    allowNull: true,
+    defaultValue: null
   }
 }, {
   tableName: 'bills',
   timestamps: true,
   createdAt: 'created_at',
   updatedAt: 'updated_at',
+  paranoid: true, // Enable soft delete
+  deletedAt: 'deleted_at',
   indexes: [
     {
       fields: ['tenant_id']

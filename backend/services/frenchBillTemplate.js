@@ -14,6 +14,18 @@ class FrenchBillTemplate {
     const property = bill.property;
     const admin = bill.admin;
     
+    // Validate and log property data
+    if (!property) {
+      console.warn(`⚠️ Bill ${bill.id} has no property data`);
+    } else {
+      console.log(`📄 Bill ${bill.id} property info:`, {
+        id: property.id,
+        title: property.title || property.name || 'N/A',
+        address: property.address || 'N/A',
+        city: property.city || 'N/A'
+      });
+    }
+    
     // Format dates in French format (DD/MM/YYYY)
     const billDate = this.formatFrenchDate(bill.bill_date);
     const dueDate = this.formatFrenchDate(bill.due_date);
@@ -21,11 +33,22 @@ class FrenchBillTemplate {
     const month = this.formatFrenchMonth(bill.month);
     
     // Calculate amounts - use new fields if available
-    const rentAmount = parseFloat(bill.rent_amount || bill.amount);
+    const rentAmount = parseFloat(bill.rent_amount || bill.amount || 0);
+    // Ensure charges are properly retrieved from bill object
     const charges = parseFloat(bill.charges) || 0;
-    const totalAmount = parseFloat(bill.total_amount || bill.amount);
+    const totalAmount = parseFloat(bill.total_amount || (rentAmount + charges));
     
-    // Build bill items array
+    // Log charges for debugging
+    console.log(`💰 Bill ${bill.id} charges breakdown:`, {
+      rentAmount: rentAmount.toFixed(2),
+      charges: charges.toFixed(2),
+      totalAmount: totalAmount.toFixed(2),
+      billCharges: bill.charges,
+      billRentAmount: bill.rent_amount,
+      billTotalAmount: bill.total_amount
+    });
+    
+    // Build bill items array - always show rent
     const billItems = [
       {
         description: 'Loyer',
@@ -34,7 +57,8 @@ class FrenchBillTemplate {
       }
     ];
 
-    // Add charges if applicable
+    // Add charges if they exist (charges > 0)
+    // This ensures charges are properly displayed in the receipt when they are set
     if (charges > 0) {
       billItems.push({
         description: 'Provision pour charges',
@@ -42,6 +66,12 @@ class FrenchBillTemplate {
         currency: '€'
       });
     }
+    
+    // Determine landlord name: Use property title first (as it represents the property owner), 
+    // fallback to admin name if property title not available
+    const landlordName = property?.title || admin?.name || 'Propriétaire';
+    
+    console.log(`👤 Landlord name determined: "${landlordName}" (property title: ${property?.title || 'N/A'}, admin: ${admin?.name || 'N/A'})`);
     
     return {
       // Header
@@ -61,7 +91,7 @@ class FrenchBillTemplate {
       // Landlord/Bailleur information
       landlordInfo: {
         title: 'BAILLEUR',
-        name: 'Hisham', // Always use Hisham as requested
+        name: landlordName,
         email: admin?.email || '',
         address: property?.address || 'Adresse du bailleur',
         city: property?.city || 'Paris',
@@ -79,13 +109,15 @@ class FrenchBillTemplate {
       },
       
       // Property information (Location)
+      // Use property.title consistently (not property.name)
       propertyInfo: {
         title: 'ADRESSE DE LA LOCATION',
-        name: property?.title || 'Non renseigné',
+        name: property?.title || property?.name || 'Non renseigné',
         address: property?.address || 'Non renseigné',
         city: property?.city || 'Non renseigné',
         country: property?.country || 'France',
-        fullAddress: `${property?.address || 'Non renseigné'}, ${property?.city || 'Non renseigné'}${property?.country ? ', ' + property.country : ''}`
+        postalCode: property?.postal_code || property?.postalCode || '',
+        fullAddress: `${property?.address || 'Non renseigné'}, ${property?.city || 'Non renseigné'}${property?.postal_code ? ' ' + property.postal_code : ''}${property?.country ? ', ' + property.country : ''}`
       },
       
       // Payment details (Détail du règlement)
@@ -103,7 +135,7 @@ class FrenchBillTemplate {
       paymentInfo: {
         title: 'DÉCLARATION DE PAIEMENT',
         instructions: [
-          `Le soussigné(e) Hisham, propriétaire du logement désigné ci-dessus, déclare avoir reçu de Monsieur/Madame ${tenant?.name || 'Non renseigné'}, la somme de ${totalAmount.toFixed(2)} euros (${this.numberToWords(totalAmount)}), au titre du paiement du loyer du mois de ${month} et lui en donne quittance, sous réserve de tous mes droits.`
+          `Le soussigné(e) ${landlordName}, propriétaire du logement désigné ci-dessus, déclare avoir reçu de Monsieur/Madame ${tenant?.name || 'Non renseigné'}, la somme de ${totalAmount.toFixed(2)} euros (${this.numberToWords(totalAmount)}), au titre du paiement du loyer du mois de ${month} et lui en donne quittance, sous réserve de tous mes droits.`
         ],
         dueDate: `Date d'échéance: le ${dueDate}`,
         amount: `Montant: ${totalAmount.toFixed(2)} €`,
@@ -112,7 +144,7 @@ class FrenchBillTemplate {
       
       // Footer
       footer: {
-        note: 'Ce modèle vous est présenté à titre indicatif. Il est destiné à vous aider à rédiger votre propre courrier. Il est donc de votre responsabilité de vérifier qu\'il en est bien ainsi et votre seule responsabilité de l\'utiliser. En cas de doute, veuillez consulter votre ADIL (pour connaître ADIL: www.anil.org).',
+        note: '',
         system: 'Système de gestion immobilière',
         signature: '(Signature)'
       }
@@ -238,19 +270,25 @@ Propriétaire
    * @param {number} utilityCharges - Utility charges
    * @returns {string} - French description
    */
-  static generateDescription(tenant, rentAmount, utilityCharges) {
-    const propertyName = tenant.property?.title || 'Propriété';
-    const tenantName = tenant.name;
+  static generateDescription(tenant, rentAmount, chargesAmount) {
+    // Use property.title consistently (fallback to property.name if title not available)
+    const propertyName = tenant.property?.title || tenant.property?.name || 'Propriété';
+    const tenantName = tenant.name || 'Locataire';
+    
+    // Log for debugging
+    if (tenant.property) {
+      console.log(`📝 Generating description for tenant ${tenantName}, property: "${propertyName}"`);
+    }
     
     let description = `Facture mensuelle de loyer pour ${tenantName}\n`;
     description += `Propriété: ${propertyName}\n`;
     description += `Loyer mensuel: €${rentAmount.toFixed(2)}`;
     
-    if (utilityCharges > 0) {
-      description += `\nCharges d'utilitaires: €${utilityCharges.toFixed(2)}`;
+    if (chargesAmount > 0) {
+      description += `\nCharges d'utilitaires: €${chargesAmount.toFixed(2)}`;
     }
     
-    description += `\nTotal: €${(rentAmount + utilityCharges).toFixed(2)}`;
+    description += `\nTotal: €${(rentAmount + chargesAmount).toFixed(2)}`;
     
     return description;
   }

@@ -5,6 +5,7 @@ const {
   login,
   getProfile,
   updateProfile,
+  changePassword,
   logout
 } = require('../controllers/authController');
 const { verifyToken } = require('../middleware/auth');
@@ -17,6 +18,7 @@ router.post('/login', validateLogin, login);
 // Protected routes
 router.get('/profile', verifyToken, getProfile);
 router.put('/profile', verifyToken, updateProfile);
+router.post('/change-password', verifyToken, changePassword);
 router.post('/logout', verifyToken, logout);
 
 module.exports = router;

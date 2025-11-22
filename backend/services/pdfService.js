@@ -27,19 +27,19 @@ class PDFService {
         // Header
         doc.fontSize(20)
            .font('Helvetica-Bold')
-           .text('RENT RECEIPT', { align: 'center' });
+           .text('QUITTANCE DE LOYER', { align: 'center' });
 
         doc.moveDown(0.5);
 
         // Company/Property Management Info
         doc.fontSize(12)
            .font('Helvetica')
-           .text('Property Management System', { align: 'center' });
+           .text('Système de Gestion Immobilière', { align: 'center' });
 
         doc.moveDown(1);
 
         // Receipt Details
-        const receiptDate = new Date().toLocaleDateString('en-US', {
+        const receiptDate = new Date().toLocaleDateString('fr-FR', {
           year: 'numeric',
           month: 'long',
           day: 'numeric'
@@ -47,31 +47,31 @@ class PDFService {
 
         doc.fontSize(14)
            .font('Helvetica-Bold')
-           .text('Receipt Details', { underline: true });
+           .text('Détails du reçu', { underline: true });
 
         doc.moveDown(0.3);
 
         // Receipt table
         const tableData = [
-          ['Receipt Number:', `#${bill.id}`],
+          ['Numéro de reçu:', `#${bill.id}`],
           ['Date:', receiptDate],
-          ['Month:', bill.month],
-          ['Due Date:', new Date(bill.due_date).toLocaleDateString('en-US')],
-          ['Status:', bill.status],
+          ['Mois:', bill.month],
+          ['Date d\'échéance:', new Date(bill.due_date).toLocaleDateString('fr-FR')],
+          ['Statut:', bill.status],
           ['', ''], // Empty row
-          ['Tenant Information:', ''],
-          ['Name:', bill.tenant.name],
+          ['Informations du locataire:', ''],
+          ['Nom:', bill.tenant.name],
           ['Email:', bill.tenant.email || 'N/A'],
-          ['Phone:', bill.tenant.phone || 'N/A'],
+          ['Téléphone:', bill.tenant.phone || 'N/A'],
           ['', ''], // Empty row
-          ['Property Information:', ''],
-          ['Property:', bill.property.title],
-          ['Address:', bill.property.address],
-          ['City:', bill.property.city],
+          ['Informations de la propriété:', ''],
+          ['Propriété:', bill.property.title],
+          ['Adresse:', bill.property.address],
+          ['Ville:', bill.property.city],
           ['', ''], // Empty row
-          ['Payment Details:', ''],
-          ['Amount:', `$${parseFloat(bill.amount).toFixed(2)}`],
-          ['Description:', bill.description || 'Monthly rent payment']
+          ['Détails du paiement:', ''],
+          ['Montant:', `${parseFloat(bill.amount).toFixed(2)}€`],
+          ['Description:', bill.description || 'Paiement du loyer mensuel']
         ];
 
         // Draw table
@@ -208,12 +208,12 @@ class PDFService {
         // Bills table
         doc.fontSize(14)
            .font('Helvetica-Bold')
-           .text('Bills Details', { underline: true });
+           .text('Détails des factures', { underline: true });
 
         doc.moveDown(0.3);
 
         // Table headers
-        const headers = ['ID', 'Tenant', 'Property', 'Amount', 'Month', 'Status', 'Due Date'];
+        const headers = ['ID', 'Locataire', 'Propriété', 'Montant', 'Mois', 'Statut', 'Date d\'échéance'];
         const colWidths = [40, 100, 120, 60, 80, 60, 80];
 
         yPosition = doc.y;
@@ -262,10 +262,10 @@ class PDFService {
 
         // Footer
         doc.fontSize(8)
-           .text('This is a computer-generated report.', 
+           .text('Ceci est un rapport généré automatiquement.', 
                  { align: 'center', y: doc.page.height - 100 });
 
-        doc.text(`Generated on ${new Date().toLocaleString()}`, 
+        doc.text(`Généré le ${new Date().toLocaleString('fr-FR')}`, 
                  { align: 'center', y: doc.page.height - 80 });
 
         doc.end();
@@ -286,6 +286,9 @@ class PDFService {
         // Generate French bill content
         const frenchContent = FrenchBillTemplate.generateBillContent(bill);
         
+        // Log landlord name for debugging
+        console.log(`📄 PDF Generation - Landlord name: "${frenchContent.landlordInfo.name}"`);
+        
         const doc = new PDFDocument({
           size: 'A4',
           margin: 50,
@@ -293,7 +296,7 @@ class PDFService {
             Title: 'Facture de Loyer',
             Author: 'Système de Gestion Immobilière',
             Subject: `Facture ${bill.month}`,
-            Creator: 'Property Management System'
+            Creator: 'Système de Gestion Immobilière'
           }
         });
 
@@ -331,7 +334,7 @@ class PDFService {
         
         doc.fontSize(10)
            .font('Helvetica')
-           .text('Hisham', 60, doc.y);
+           .text(frenchContent.landlordInfo.name, 60, doc.y);
 
         doc.moveDown(0.3);
         
@@ -376,7 +379,7 @@ class PDFService {
         doc.fontSize(10)
            .font('Helvetica')
            .text(
-             `Je soussigné(e) Hisham, propriétaire du logement désigné ci-dessus, déclare avoir reçu de Monsieur/Madame ${frenchContent.tenantInfo.name || 'Non renseigné'}, la somme de ${frenchContent.billDetails.total.amount} euros (${frenchContent.billDetails.total.amount}), au titre du paiement du loyer du mois de ${frenchContent.billInfo.month} et lui en donne quittance, sous réserve de tous mes droits.`,
+             `Je soussigné(e) ${frenchContent.landlordInfo.name}, propriétaire du logement désigné ci-dessus, déclare avoir reçu de Monsieur/Madame ${frenchContent.tenantInfo.name || 'Non renseigné'}, la somme de ${frenchContent.billDetails.total.amount} euros (${frenchContent.billDetails.total.amount}), au titre du paiement du loyer du mois de ${frenchContent.billInfo.month} et lui en donne quittance, sous réserve de tous mes droits.`,
              60, 
              doc.y,
              { width: 480, align: 'justify' }
@@ -431,14 +434,7 @@ class PDFService {
 
         doc.moveDown(4);
 
-        // Footer note
-        doc.fontSize(7)
-           .font('Helvetica')
-           .text(frenchContent.footer.note, 60, doc.page.height - 120, { 
-             width: 480, 
-             align: 'center',
-             lineGap: 2
-           });
+        // Footer note removed as requested
 
         // Handle stream end
         stream.on('finish', () => {
@@ -562,7 +558,7 @@ class PDFService {
     doc.moveDown(0.3);
 
     const landlordInfo = [
-      ['Nom:', 'Hisham'],
+      ['Nom:', frenchContent.landlordInfo.name],
       ['Société:', frenchContent.landlordInfo.company],
       ['Ville:', `${frenchContent.landlordInfo.postalCode} ${frenchContent.landlordInfo.city}`],
       ['Pays:', frenchContent.landlordInfo.country]

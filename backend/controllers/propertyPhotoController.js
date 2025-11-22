@@ -1,6 +1,7 @@
 const { PropertyPhoto, Property } = require('../models');
 const { deleteFile, getFileUrl } = require('../utils/fileUpload');
 const path = require('path');
+const fs = require('fs');
 
 /**
  * Upload property photos
@@ -46,15 +47,35 @@ const uploadPropertyPhotos = async (req, res) => {
     // Create photo records for each uploaded file
     const photoRecords = await Promise.all(
       req.files.map(async (file, index) => {
-        const relativePath = path.relative(
-          path.join(__dirname, '..'),
-          file.path
-        );
+        const backendRoot = path.join(__dirname, '..');
+        let relativePath = path.relative(backendRoot, file.path);
+        
+        // Normalize path separators to forward slashes
+        relativePath = relativePath.replace(/\\/g, '/');
+        
+        // Ensure the path starts with 'public/uploads/' for consistency
+        if (!relativePath.startsWith('public/uploads/')) {
+          // Reconstruct the path correctly if needed
+          if (relativePath.includes('uploads')) {
+            const parts = relativePath.split('uploads');
+            relativePath = `public/uploads${parts[parts.length - 1]}`;
+          } else {
+            relativePath = `public/uploads/${path.basename(file.path)}`;
+          }
+        }
+        
+        // Verify file exists
+        const fullFilePath = path.join(backendRoot, relativePath);
+        if (!fs.existsSync(fullFilePath)) {
+          console.error(`❌ File does not exist at path: ${fullFilePath}`);
+          throw new Error(`Uploaded file not found: ${file.originalname}`);
+        }
 
         const fileUrl = getFileUrl(relativePath, req);
-        console.log(`Creating photo record for file: ${file.originalname}`);
-        console.log(`File path: ${relativePath}`);
-        console.log(`File URL: ${fileUrl}`);
+        console.log(`📸 Creating photo record for file: ${file.originalname}`);
+        console.log(`   File path: ${relativePath}`);
+        console.log(`   File URL: ${fileUrl}`);
+        console.log(`   File exists: ${fs.existsSync(fullFilePath)}`);
 
         return await PropertyPhoto.create({
           admin_id: adminId,

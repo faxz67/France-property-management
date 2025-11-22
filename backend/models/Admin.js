@@ -159,9 +159,10 @@ Admin.canAccess = async function(currentAdminId, targetAdminId) {
     return false;
   }
   
-  // Super admins can only access admins they created or system admins (created_by is NULL)
+  // Super admins can only access admins they created (complete isolation)
+  // Each SUPER_ADMIN is completely isolated and cannot see other SUPER_ADMIN's admins
   if (currentAdmin.role === 'SUPER_ADMIN') {
-    return targetAdmin.created_by === currentAdminId || targetAdmin.created_by === null;
+    return targetAdmin.created_by === currentAdminId;
   }
   
   // Regular admins cannot access other admins

@@ -49,6 +49,13 @@ const Tenant = sequelize.define('Tenant', {
       len: [10, 50]
     }
   },
+  address: {
+    type: DataTypes.STRING(500),
+    allowNull: true,
+    validate: {
+      len: [0, 500]
+    }
+  },
   lease_start: {
     type: DataTypes.DATEONLY,
     allowNull: true,
@@ -76,6 +83,14 @@ const Tenant = sequelize.define('Tenant', {
       max: 1000000
     }
   },
+  charges_amount: {
+    type: DataTypes.DECIMAL(10, 2),
+    allowNull: true,
+    validate: {
+      min: 0,
+      max: 1000000
+    }
+  },
   join_date: {
     type: DataTypes.DATEONLY,
     allowNull: false,
@@ -91,12 +106,19 @@ const Tenant = sequelize.define('Tenant', {
     validate: {
       isIn: [['ACTIVE', 'INACTIVE', 'EXPIRED']]
     }
+  },
+  deleted_at: {
+    type: DataTypes.DATE,
+    allowNull: true,
+    defaultValue: null
   }
 }, {
   tableName: 'tenants',
   timestamps: true,
   createdAt: 'created_at',
   updatedAt: 'updated_at',
+  paranoid: true, // Enable soft delete
+  deletedAt: 'deleted_at',
   indexes: [
     {
       fields: ['admin_id']

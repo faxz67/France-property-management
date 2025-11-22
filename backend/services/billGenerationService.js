@@ -325,72 +325,135 @@ class BillGenerationService {
       const dueDateString = dueDate.toISOString().slice(0, 10);
 
       // Find active tenants for this admin
+      console.log(`🔍 Finding all active tenants for admin ${adminId}...`);
       const activeTenants = await Tenant.findAll({
         where: {
           status: 'ACTIVE',
           admin_id: adminId
         },
+        attributes: ['id', 'name', 'email', 'phone', 'rent_amount', 'charges_amount', 'property_id', 'admin_id'],
         include: [
           {
             model: Property,
             as: 'property',
-            attributes: ['id', 'title', 'address', 'city', 'monthly_rent', 'admin_id']
+            attributes: ['id', 'title', 'address', 'city', 'country', 'postal_code', 'monthly_rent', 'admin_id', 'property_type'],
+            required: false
           }
         ]
       });
 
+      console.log(`📊 Found ${activeTenants.length} active tenant(s) for admin ${adminId}`);
+
       let billsGenerated = 0;
       let billsSkipped = 0;
+      const errors = [];
 
       for (const tenant of activeTenants) {
-        // Check if bill already exists
-        const existingBill = await Bill.findOne({
-          where: {
-            tenant_id: tenant.id,
-            month: currentMonth,
-            admin_id: adminId
+        try {
+          // Validate tenant has property
+          if (!tenant.property || !tenant.property.id) {
+            console.error(`❌ Tenant ${tenant.id} (${tenant.name}) has no property assigned. Skipping...`);
+            billsSkipped++;
+            continue;
           }
-        });
 
-        if (existingBill) {
+          // Check if bill already exists
+          const existingBill = await Bill.findOne({
+            where: {
+              tenant_id: tenant.id,
+              month: currentMonth,
+              admin_id: adminId
+            }
+          });
+
+          if (existingBill) {
+            console.log(`⏭️  Bill already exists for tenant ${tenant.name} (ID: ${tenant.id}) for ${currentMonth}`);
+            billsSkipped++;
+            continue;
+          }
+
+          // Validate property data before creating bill
+          if (!tenant.property.title) {
+            console.warn(`⚠️  Tenant ${tenant.name} (ID: ${tenant.id}) has property without title. Property ID: ${tenant.property.id}`);
+          }
+
+          // Create bill
+          // Use tenant's rent_amount if available, otherwise use property's monthly_rent
+          const rentAmount = parseFloat(tenant.rent_amount) || parseFloat(tenant.property?.monthly_rent) || 0;
+          // Use tenant's charges_amount if available
+          const chargesAmount = parseFloat(tenant.charges_amount) || 0;
+          const totalAmount = rentAmount + chargesAmount;
+
+          const createdBill = await Bill.create({
+            tenant_id: tenant.id,
+            property_id: tenant.property.id,
+            admin_id: adminId,
+            amount: totalAmount,
+            rent_amount: rentAmount,
+            charges: chargesAmount,
+            total_amount: totalAmount,
+            month: currentMonth,
+            bill_date: billDate,
+            due_date: dueDateString || null, // Optional due_date
+            status: 'PENDING',
+            language: 'fr',
+            description: FrenchBillTemplate.generateDescription(tenant, rentAmount, chargesAmount)
+          });
+
+          // Verify the created bill has correct property association
+          const verifyBill = await Bill.findByPk(createdBill.id, {
+            include: [{
+              model: Property,
+              as: 'property',
+              attributes: ['id', 'title', 'address', 'city', 'country'],
+              required: false
+            }]
+          });
+
+          if (verifyBill && verifyBill.property) {
+            console.log(`✅ Generated bill for tenant ${tenant.name} (ID: ${tenant.id})`);
+            console.log(`   Property: "${verifyBill.property.title}" (ID: ${verifyBill.property.id})`);
+            console.log(`   Amount: ${totalAmount}€`);
+          } else {
+            console.warn(`⚠️  Bill ${createdBill.id} created but property data verification failed`);
+          }
+
+          billsGenerated++;
+        } catch (error) {
+          console.error(`❌ Error generating bill for tenant ${tenant.id} (${tenant.name}):`, error.message);
+          errors.push({
+            tenantId: tenant.id,
+            tenantName: tenant.name,
+            error: error.message
+          });
           billsSkipped++;
           continue;
         }
-
-        // Create bill
-        const rentAmount = parseFloat(tenant.property.monthly_rent) || 0;
-        const utilityCharges = parseFloat(tenant.utility_charges) || 0;
-        const totalAmount = rentAmount + utilityCharges;
-
-        await Bill.create({
-          tenant_id: tenant.id,
-          property_id: tenant.property.id,
-          admin_id: adminId,
-          amount: totalAmount,
-          rent_amount: rentAmount,
-          charges: utilityCharges,
-          total_amount: totalAmount,
-          month: currentMonth,
-          bill_date: billDate,
-          due_date: dueDateString,
-          status: 'PENDING',
-          language: 'fr',
-          description: FrenchBillTemplate.generateDescription(tenant, rentAmount, utilityCharges)
-        });
-
-        billsGenerated++;
       }
 
-      return {
+      const result = {
         success: true,
         message: `Generated bills for admin ${adminId} for ${currentMonth}`,
         statistics: {
           totalTenants: activeTenants.length,
           billsGenerated,
           billsSkipped,
+          errors: errors.length,
           month: currentMonth
         }
       };
+
+      if (errors.length > 0) {
+        result.errorDetails = errors;
+      }
+
+      console.log(`📊 Bill generation summary for ${currentMonth}:`);
+      console.log(`   Total tenants: ${activeTenants.length}`);
+      console.log(`   Bills generated: ${billsGenerated}`);
+      console.log(`   Bills skipped: ${billsSkipped}`);
+      console.log(`   Errors: ${errors.length}`);
+
+      return result;
 
     } catch (error) {
       console.error('Error generating bills for admin:', error);

@@ -33,17 +33,20 @@ const getAllBills = async (req, res) => {
         {
           model: Tenant,
           as: 'tenant',
-          attributes: ['id', 'name', 'email', 'phone']
+          attributes: ['id', 'name', 'email', 'phone'],
+          required: false
         },
         {
           model: Property,
           as: 'property',
-          attributes: ['id', 'title', 'address', 'city', 'country']
+          attributes: ['id', 'title', 'address', 'city', 'country', 'postal_code', 'monthly_rent', 'property_type'],
+          required: false
         },
         {
           model: Admin,
           as: 'admin',
-          attributes: ['id', 'name', 'email']
+          attributes: ['id', 'name', 'email'],
+          required: false
         }
       ],
       order,
@@ -86,22 +89,26 @@ const getBillById = async (req, res) => {
         {
           model: Tenant,
           as: 'tenant',
-          attributes: ['id', 'name', 'email', 'phone', 'join_date']
+          attributes: ['id', 'name', 'email', 'phone', 'join_date'],
+          required: false
         },
         {
           model: Property,
           as: 'property',
-          attributes: ['id', 'title', 'address', 'city', 'country', 'monthly_rent']
+          attributes: ['id', 'title', 'address', 'city', 'country', 'postal_code', 'monthly_rent', 'property_type'],
+          required: false
         },
         {
           model: Admin,
           as: 'admin',
-          attributes: ['id', 'name', 'email']
+          attributes: ['id', 'name', 'email'],
+          required: false
         },
         {
           model: Receipt,
           as: 'receipts',
-          attributes: ['id', 'sent_date', 'status', 'sent_to_tenant', 'sent_to_admin']
+          attributes: ['id', 'sent_date', 'status', 'sent_to_tenant', 'sent_to_admin'],
+          required: false
         }
       ]
     });
@@ -140,13 +147,13 @@ const getBillById = async (req, res) => {
  */
 const createBill = async (req, res) => {
   try {
-    const { tenant_id, property_id, amount, rent_amount, charges, month, due_date, description } = req.body;
+    const { tenant_id, property_id, amount, rent_amount, charges, month, due_date, payment_date, description } = req.body;
 
     // Validate required fields
-    if (!tenant_id || !property_id || !amount || !month || !due_date) {
+    if (!tenant_id || !property_id || !amount || !month) {
       return res.status(400).json({
         success: false,
-        message: 'Missing required fields: tenant_id, property_id, amount, month, due_date'
+        message: 'Missing required fields: tenant_id, property_id, amount, month'
       });
     }
 
@@ -158,6 +165,7 @@ const createBill = async (req, res) => {
     
     const tenant = await Tenant.findOne({
       where: tenantWhereClause,
+      attributes: ['id', 'name', 'email', 'phone', 'charges_amount'],
       include: [{
         model: Property,
         as: 'property',
@@ -209,7 +217,8 @@ const createBill = async (req, res) => {
 
     // Calculate rent_amount, charges, and total_amount
     const rentAmount = rent_amount ? parseFloat(rent_amount) : (tenant.property?.monthly_rent ? parseFloat(tenant.property.monthly_rent) : parseFloat(amount));
-    const chargesAmount = charges ? parseFloat(charges) : 0;
+    // Use charges from form, or tenant's charges_amount, or default to 0
+    const chargesAmount = charges ? parseFloat(charges) : (tenant.charges_amount ? parseFloat(tenant.charges_amount) : 0);
     const totalAmount = rentAmount + chargesAmount;
 
     const bill = await Bill.create({
@@ -221,7 +230,8 @@ const createBill = async (req, res) => {
       charges: chargesAmount,
       total_amount: totalAmount,
       month,
-      due_date,
+      due_date: due_date || null, // Optional due_date
+      payment_date: payment_date || null, // Optional payment_date
       bill_date: new Date().toISOString().split('T')[0], // Set bill_date to today
       description: description || 'Monthly rent payment'
     });
@@ -237,7 +247,8 @@ const createBill = async (req, res) => {
         {
           model: Property,
           as: 'property',
-          attributes: ['id', 'title', 'address', 'city']
+          attributes: ['id', 'title', 'address', 'city', 'country', 'postal_code', 'monthly_rent', 'property_type'],
+          required: false
         }
       ]
     });
@@ -263,7 +274,7 @@ const createBill = async (req, res) => {
 const updateBill = async (req, res) => {
   try {
     const { id } = req.params;
-    const { amount, due_date, status, description } = req.body;
+    const { amount, due_date, payment_date, status, description } = req.body;
 
     // ALL admins (including SUPER_ADMIN) only see their own bills
     const whereClause = { 
@@ -285,6 +296,7 @@ const updateBill = async (req, res) => {
     // Update fields
     if (amount !== undefined) bill.amount = parseFloat(amount);
     if (due_date !== undefined) bill.due_date = due_date;
+    if (payment_date !== undefined) bill.payment_date = payment_date || null;
     if (status !== undefined) bill.status = status;
     if (description !== undefined) bill.description = description;
 
@@ -351,8 +363,27 @@ const deleteBill = async (req, res) => {
  */
 const getReceiptHistory = async (req, res) => {
   try {
-    const { admin_id } = req.user;
+    const admin_id = req.admin?.id;
     const { id } = req.params;
+
+    if (!admin_id) {
+      return res.status(401).json({
+        success: false,
+        message: 'Unauthorized'
+      });
+    }
+
+    // First verify the bill belongs to the admin (isolation check)
+    const bill = await Bill.findOne({
+      where: { id, admin_id }
+    });
+
+    if (!bill) {
+      return res.status(404).json({
+        success: false,
+        message: 'Bill not found or access denied'
+      });
+    }
 
     const receipts = await Receipt.findAll({
       where: { bill_id: id, admin_id },
@@ -477,12 +508,14 @@ const downloadBill = async (req, res) => {
         {
           model: Property,
           as: 'property',
-          attributes: ['id', 'title', 'address', 'city', 'country', 'monthly_rent']
+          attributes: ['id', 'title', 'address', 'city', 'country', 'postal_code', 'monthly_rent', 'property_type'],
+          required: false
         },
         {
           model: Admin,
           as: 'admin',
-          attributes: ['id', 'name', 'email']
+          attributes: ['id', 'name', 'email'],
+          required: false
         }
       ]
     });
@@ -494,17 +527,91 @@ const downloadBill = async (req, res) => {
       });
     }
 
+    // Validate tenant data exists
+    if (!bill.tenant || !bill.tenant.name) {
+      console.error(`❌ Bill ${bill.id} has no tenant data`);
+      return res.status(500).json({
+        success: false,
+        message: 'Bill tenant data is missing'
+      });
+    }
+
+    // Validate property data exists
+    if (!bill.property || !bill.property.id) {
+      console.error(`❌ Bill ${bill.id} has no property data`);
+      return res.status(500).json({
+        success: false,
+        message: 'Bill property data is missing'
+      });
+    }
+
+    // Log property data for debugging
+    console.log(`📄 Bill ${bill.id} property data:`, {
+      id: bill.property.id,
+      title: bill.property.title,
+      address: bill.property.address,
+      city: bill.property.city
+    });
+    
+    // Log admin data for debugging
+    console.log(`👤 Bill ${bill.id} admin data:`, {
+      id: bill.admin?.id || 'N/A',
+      name: bill.admin?.name || 'N/A',
+      email: bill.admin?.email || 'N/A'
+    });
+
     // Generate and persist PDF to disk, then stream exact file bytes
     const pdfPath = await PDFService.generateBillPDF(bill);
     if (!bill.pdf_path || bill.pdf_path !== pdfPath) {
       await bill.update({ pdf_path: pdfPath });
     }
     const fsLocal = require('fs');
+    
+    // Generate professional filename: {tenant-name}-{month}.pdf
+    // Senior developer approach: robust sanitization with proper encoding
+    const tenantName = bill.tenant.name.trim();
+    const billMonth = bill.month || new Date().toISOString().slice(0, 7);
+    
+    // Sanitize tenant name for filesystem compatibility
+    // Remove path traversal attempts, special characters, and normalize
+    let sanitizedTenantName = tenantName
+      .replace(/\.\./g, '') // Remove path traversal
+      .replace(/[<>:"|?*\x00-\x1f]/g, '') // Remove filesystem forbidden chars
+      .replace(/[^\p{L}\p{N}\s-]/gu, '') // Remove special chars, keep unicode letters/numbers
+      .replace(/\s+/g, '-') // Replace spaces with hyphens
+      .replace(/-+/g, '-') // Replace multiple hyphens with single
+      .replace(/^-|-$/g, '') // Remove leading/trailing hyphens
+      .toLowerCase()
+      .trim();
+    
+    // Ensure minimum length and limit maximum
+    if (sanitizedTenantName.length === 0) {
+      sanitizedTenantName = 'tenant';
+    }
+    if (sanitizedTenantName.length > 50) {
+      sanitizedTenantName = sanitizedTenantName.substring(0, 50);
+    }
+    
+    // Format: {tenant-name}-{month}.pdf
+    const filename = `${sanitizedTenantName}-${billMonth}.pdf`;
+    
+    console.log(`📄 Download filename generated for bill ${bill.id}:`);
+    console.log(`   Tenant: "${tenantName}" → "${sanitizedTenantName}"`);
+    console.log(`   Month: ${billMonth}`);
+    console.log(`   Filename: "${filename}"`);
+    
+    // Encode filename for Content-Disposition header (RFC 5987 for international characters)
+    const encodedFilename = encodeURIComponent(filename);
+    
     // Add robust headers to help browser viewers
     try {
       const stat = fsLocal.statSync(pdfPath);
       res.setHeader('Content-Type', 'application/pdf');
-      res.setHeader('Content-Disposition', `inline; filename="facture-${bill.id}-${bill.month}.pdf"`);
+      // Use both filename and filename* for maximum browser compatibility
+      // Format: attachment; filename="name.pdf"; filename*=UTF-8''encoded-name.pdf
+      const contentDisposition = `attachment; filename="${filename}"; filename*=UTF-8''${encodedFilename}`;
+      res.setHeader('Content-Disposition', contentDisposition);
+      console.log('📤 Setting Content-Disposition header:', contentDisposition);
       res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
       res.setHeader('Pragma', 'no-cache');
       res.setHeader('Expires', '0');
@@ -514,7 +621,11 @@ const downloadBill = async (req, res) => {
     } catch (statErr) {
       console.warn('Could not stat PDF before streaming:', statErr.message);
       res.setHeader('Content-Type', 'application/pdf');
-      res.setHeader('Content-Disposition', `inline; filename="facture-${bill.id}-${bill.month}.pdf"`);
+      // Use both filename and filename* for maximum browser compatibility
+      // Format: attachment; filename="name.pdf"; filename*=UTF-8''encoded-name.pdf
+      const contentDisposition = `attachment; filename="${filename}"; filename*=UTF-8''${encodedFilename}`;
+      res.setHeader('Content-Disposition', contentDisposition);
+      console.log('📤 Setting Content-Disposition header (fallback):', contentDisposition);
       res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
       res.setHeader('Pragma', 'no-cache');
       res.setHeader('Expires', '0');

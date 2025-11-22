@@ -21,6 +21,8 @@ const tenantRoutes = require('./routes/tenants');
 const billRoutes = require('./routes/bills');
 const analyticsRoutes = require('./routes/analytics');
 const expensesRoutes = require('./routes/expenses');
+const restoreRoutes = require('./routes/restore');
+const auditRoutes = require('./routes/audit');
 
 // Import services
 const cronService = require('./services/cronService');
@@ -48,7 +50,7 @@ app.use(helmet({
       styleSrc: ["'self'", "'unsafe-inline'"],
       scriptSrc: ["'self'"],
       imgSrc: ["'self'", "data:", "http:", "https:", "blob:"],
-      connectSrc: ["'self'", "http://192.168.1.109:*", "http://localhost:*", "https://localhost:*"],
+      connectSrc: ["'self'", "http://localhost:*", "https://localhost:*", "http://192.168.1.109:*", "https://192.168.1.109:*"],
     },
   },
   crossOriginResourcePolicy: { policy: "cross-origin" }
@@ -80,9 +82,7 @@ app.use(session({
 // CORS configuration
 app.use(cors({
   origin: [
-    process.env.FRONTEND_URL || 'http://192.168.1.109',
-    'http://192.168.1.109',
-    'http://192.168.1.109:4002',
+    process.env.FRONTEND_URL || 'http://localhost:5174',
     'http://localhost:5174',
     'http://localhost:4002'
   ],
@@ -107,20 +107,35 @@ const generalLimiter = rateLimit({
   }
 });
 
-// Stricter rate limiting for auth endpoints
-const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 50, // 50 login attempts per 15 minutes per IP
-  message: {
-    success: false,
-    error: 'Too many authentication attempts, please try again later.'
-  },
-  standardHeaders: true,
-  legacyHeaders: false
-});
+// Import security middlewares
+const { 
+  strictAuthLimiter, 
+  checkIPBlock, 
+  sanitizeInput, 
+  validateFileUpload,
+  requestId,
+  securityHeaders
+} = require('./middleware/security');
+const { auditMiddleware } = require('./services/auditService');
 
+// Apply security headers
+app.use(securityHeaders);
+
+// Request ID for tracking
+app.use(requestId);
+
+// IP blocking check (before other routes)
+app.use('/api/', checkIPBlock);
+
+// Input sanitization
+app.use(sanitizeInput);
+
+// Stricter rate limiting for auth endpoints (using new strict limiter)
+app.use('/api/auth/login', strictAuthLimiter);
+app.use('/api/auth/register', strictAuthLimiter);
+
+// General rate limiting
 app.use('/api/', generalLimiter);
-app.use('/api/auth/', authLimiter);
 
 // Body parsing middleware
 app.use(express.json({ limit: '10mb' }));
@@ -176,6 +191,9 @@ app.use('/uploads/legacy',
 
 // Serve static files from the frontend build - DISABLED IN DEVELOPMENT
 // app.use(express.static(frontendPath));
+
+// Audit logging middleware (for sensitive operations)
+app.use('/api/', auditMiddleware);
 
 // Logging middleware
 if (process.env.NODE_ENV === 'development') {
@@ -371,7 +389,30 @@ if (process.env.NODE_ENV === 'development') {
         try {
           const stat = fsLocal.statSync(bill.pdf_path);
           res.setHeader('Content-Type', 'application/pdf');
-          res.setHeader('Content-Disposition', `inline; filename="facture-${bill.id}-${bill.month}.pdf"`);
+          // Generate professional filename: {tenant-name}-{month}.pdf
+          const tenantName = bill.tenant?.name?.trim() || 'tenant';
+          const billMonth = bill.month || new Date().toISOString().slice(0, 7);
+          
+          let sanitizedTenantName = tenantName
+            .replace(/\.\./g, '')
+            .replace(/[<>:"|?*\x00-\x1f]/g, '')
+            .replace(/[^\p{L}\p{N}\s-]/gu, '')
+            .replace(/\s+/g, '-')
+            .replace(/-+/g, '-')
+            .replace(/^-|-$/g, '')
+            .toLowerCase()
+            .trim();
+          
+          if (sanitizedTenantName.length === 0) {
+            sanitizedTenantName = 'tenant';
+          }
+          if (sanitizedTenantName.length > 50) {
+            sanitizedTenantName = sanitizedTenantName.substring(0, 50);
+          }
+          
+          const filename = `${sanitizedTenantName}-${billMonth}.pdf`;
+          const encodedFilename = encodeURIComponent(filename);
+          res.setHeader('Content-Disposition', `attachment; filename="${filename}"; filename*=UTF-8''${encodedFilename}`);
           res.setHeader('Cache-Control', 'no-cache');
           res.setHeader('Accept-Ranges', 'bytes');
           res.setHeader('Content-Length', stat.size);
@@ -404,6 +445,8 @@ app.use('/api/tenants', tenantRoutes);
 app.use('/api/bills', billRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/expenses', expensesRoutes);
+app.use('/api/restore', restoreRoutes);
+app.use('/api/audit', auditRoutes);
 
 // Serve the frontend for any non-API routes
 // Frontend serving route - DISABLED IN DEVELOPMENT
@@ -548,14 +591,14 @@ const startServer = async () => {
     cronService.initialize();
 
     // Lock to the specified PORT; fail fast if in use
-    const server = app.listen(Number(PORT), () => {
+    const server = app.listen(Number(PORT), '0.0.0.0', () => {
       console.log('========================================');
       console.log('🚀 Property Management API Server');
       console.log('========================================');
       console.log(`📍 Status: Running`);
       console.log(`🔗 URL: http://192.168.1.109:${PORT}`);
       console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
-      console.log(`🎯 Frontend URL: ${process.env.FRONTEND_URL || 'http://192.168.1.109'}`);
+      console.log(`🎯 Frontend URL: ${process.env.FRONTEND_URL || 'http://192.168.1.109:80'}`);  
       console.log(`💾 Database Pool: Max ${process.env.NODE_ENV === 'production' ? '50' : '20'} connections`);
       console.log(`⚡ Rate Limit: ${process.env.RATE_LIMIT_MAX_REQUESTS || '2000'} requests per 15 minutes`);
       console.log('🔧 Multi-user support: ENABLED');

@@ -1,5 +1,8 @@
-const { Property, Admin, Tenant } = require('../models');
+const { Property, Admin, Tenant, PropertyPhoto } = require('../models');
 const { Op } = require('sequelize');
+const path = require('path');
+const fs = require('fs');
+const { getFileUrl } = require('../utils/fileUpload');
 
 // Get all properties with pagination and filters
 const getAllProperties = async (req, res) => {
@@ -24,7 +27,7 @@ const getAllProperties = async (req, res) => {
         { title: { [Op.like]: `%${search}%` } },
         { address: { [Op.like]: `%${search}%` } },
         { city: { [Op.like]: `%${search}%` } },
-        { country: { [Op.like]: `%${search}%` } }
+        { postal_code: { [Op.like]: `%${search}%` } }
       ];
     }
     
@@ -135,6 +138,25 @@ const getPropertyById = async (req, res) => {
 // Create new property
 const createProperty = async (req, res) => {
   try {
+    // Debug: log received data
+    console.log('📥 Creating property - received data:', {
+      title: req.body.title,
+      address: req.body.address,
+      city: req.body.city,
+      postal_code: req.body.postal_code,
+      property_type: req.body.property_type,
+      monthly_rent: req.body.monthly_rent,
+      hasFile: !!req.file,
+      fileInfo: req.file ? {
+        filename: req.file.filename,
+        originalname: req.file.originalname,
+        mimetype: req.file.mimetype,
+        size: req.file.size,
+        path: req.file.path
+      } : null,
+      allBodyKeys: Object.keys(req.body)
+    });
+    
     const {
       title,
       description,
@@ -152,6 +174,42 @@ const createProperty = async (req, res) => {
       number_of_rooms,
       number_of_gardens
     } = req.body;
+    
+    // Validate required fields
+    if (!title || !title.trim()) {
+      return res.status(400).json({
+        success: false,
+        error: 'Title is required'
+      });
+    }
+    
+    if (!address || !address.trim()) {
+      return res.status(400).json({
+        success: false,
+        error: 'Address is required'
+      });
+    }
+    
+    if (!city || !city.trim()) {
+      return res.status(400).json({
+        success: false,
+        error: 'City is required'
+      });
+    }
+    
+    if (!postal_code || !postal_code.trim()) {
+      return res.status(400).json({
+        success: false,
+        error: 'Postal code is required'
+      });
+    }
+    
+    if (!property_type || !property_type.trim()) {
+      return res.status(400).json({
+        success: false,
+        error: 'Property type is required'
+      });
+    }
 
     // Derive photo URL if uploaded
     let photoUrl = null;
@@ -179,17 +237,17 @@ const createProperty = async (req, res) => {
       });
     }
 
-    const property = await Property.create({
+    // Build property data object, only including optional fields if provided
+    const propertyData = {
       admin_id: req.admin.id,
       title,
-      description,
+      description: description || undefined,
       address,
       city,
-      state,
-      postal_code,
-      country,
+      state: state || undefined,
+      postal_code: postal_code.trim(),
       property_type,
-      monthly_rent,
+      monthly_rent: monthly_rent || undefined,
       photo: photoUrl || undefined,
       number_of_halls: toIntOrUndef(number_of_halls),
       number_of_kitchens: toIntOrUndef(number_of_kitchens),
@@ -197,31 +255,204 @@ const createProperty = async (req, res) => {
       number_of_parking_spaces: toIntOrUndef(number_of_parking_spaces),
       number_of_rooms: toIntOrUndef(number_of_rooms),
       number_of_gardens: toIntOrUndef(number_of_gardens)
-    });
+    };
+    
+    // Only include country if it's provided and not empty
+    if (country && country.trim()) {
+      propertyData.country = country.trim();
+    }
 
-    // Fetch the property with admin details
+    const property = await Property.create(propertyData);
+
+    // If a photo was uploaded, create a PropertyPhoto record
+    let photoCreationError = null;
+    if (req.file && req.file.filename) {
+      try {
+        // Verify file exists
+        if (!fs.existsSync(req.file.path)) {
+          throw new Error(`Uploaded file does not exist at path: ${req.file.path}`);
+        }
+
+        // Files are saved to 'public/uploads/' directory (to match server static serving)
+        // req.file.path is the absolute path, e.g., C:\...\backend\public\uploads\filename.jpg
+        // We need the relative path from backend root: public/uploads/filename.jpg
+        const backendRoot = path.join(__dirname, '..');
+        let relativePath = path.relative(backendRoot, req.file.path);
+        
+        // Normalize path separators for cross-platform compatibility
+        relativePath = relativePath.replace(/\\/g, '/');
+        
+        // Ensure the path starts with 'public/uploads/' for consistency
+        if (!relativePath.startsWith('public/uploads/')) {
+          // If the file is directly in public/uploads, ensure correct path
+          if (relativePath.startsWith('public/uploads')) {
+            relativePath = relativePath;
+          } else {
+            // Reconstruct the path correctly
+            relativePath = `public/uploads/${req.file.filename}`;
+          }
+        }
+        
+        console.log('📁 File path details:', {
+          absolutePath: req.file.path,
+          relativePath: relativePath,
+          filename: req.file.filename,
+          backendRoot: backendRoot
+        });
+
+        // Get the file URL using the same utility as PropertyPhoto controller
+        const fileUrl = getFileUrl(relativePath, req);
+        
+        console.log('🔗 Generated file URL:', fileUrl);
+
+        // Check if property already has photos (shouldn't happen on creation, but check anyway)
+        const existingPhotosCount = await PropertyPhoto.count({
+          where: { property_id: property.id }
+        });
+
+        // If this is the first photo for this property, it should be primary
+        // Also, if creating a new property, the first photo should always be primary
+        const isPrimary = existingPhotosCount === 0;
+
+        // If there are existing photos, unset their primary status
+        if (existingPhotosCount > 0) {
+          await PropertyPhoto.update(
+            { is_primary: false },
+            { where: { property_id: property.id } }
+          );
+          console.log(`📸 Unset primary status for ${existingPhotosCount} existing photo(s)`);
+        }
+
+        console.log('📸 Creating PropertyPhoto record:', {
+          filename: req.file.filename,
+          absolutePath: req.file.path,
+          fileExists: fs.existsSync(req.file.path),
+          relativePath: relativePath,
+          fileUrl: fileUrl,
+          propertyId: property.id,
+          adminId: req.admin.id,
+          isPrimary: isPrimary,
+          existingPhotosCount: existingPhotosCount
+        });
+
+        // Verify file exists before creating record
+        const fullFilePath = path.join(backendRoot, relativePath);
+        if (!fs.existsSync(fullFilePath)) {
+          throw new Error(`File does not exist at expected path: ${fullFilePath}`);
+        }
+        
+        console.log('✅ File verified at path:', fullFilePath);
+
+        // Create PropertyPhoto record as primary photo
+        const photoRecord = await PropertyPhoto.create({
+          admin_id: req.admin.id,
+          property_id: property.id,
+          file_path: relativePath,
+          file_url: fileUrl,
+          original_filename: req.file.originalname || req.file.filename,
+          file_size: req.file.size || 0,
+          mime_type: req.file.mimetype || 'image/jpeg',
+          is_primary: true // Always set as primary for new property creation
+        });
+
+        console.log('✅ PropertyPhoto record created successfully:', {
+          photoId: photoRecord.id,
+          fileUrl: photoRecord.file_url,
+          propertyId: photoRecord.property_id,
+          filePath: photoRecord.file_path,
+          isPrimary: photoRecord.is_primary,
+          fileExists: fs.existsSync(fullFilePath)
+        });
+        
+        // Verify the record was saved by querying it back
+        const verifyPhoto = await PropertyPhoto.findByPk(photoRecord.id);
+        if (verifyPhoto) {
+          console.log('✅ Verified PropertyPhoto exists in database:', {
+            id: verifyPhoto.id,
+            fileUrl: verifyPhoto.file_url,
+            filePath: verifyPhoto.file_path
+          });
+        } else {
+          console.error('❌ PropertyPhoto was not found after creation!');
+        }
+      } catch (photoError) {
+        photoCreationError = photoError;
+        console.error('❌ Failed to create PropertyPhoto record:', {
+          error: photoError.message,
+          stack: photoError.stack,
+          filename: req.file?.filename,
+          path: req.file?.path,
+          fileExists: req.file?.path ? fs.existsSync(req.file.path) : false
+        });
+        // Don't fail the property creation if photo record creation fails
+        // But log it clearly for debugging
+      }
+    } else {
+      console.log('ℹ️ No photo file uploaded with property creation');
+    }
+
+    // Fetch the property with admin details and photos
     const propertyWithAdmin = await Property.findByPk(property.id, {
       include: [
         {
           model: Admin,
           as: 'admin',
           attributes: ['id', 'name', 'email']
+        },
+        {
+          model: PropertyPhoto,
+          as: 'photos',
+          required: false,
+          order: [['is_primary', 'DESC'], ['created_at', 'DESC']]
         }
       ]
     });
+    
+    // Log photos for debugging
+    if (propertyWithAdmin && propertyWithAdmin.photos) {
+      console.log(`📸 Property ${property.id} has ${propertyWithAdmin.photos.length} photo(s) after creation`);
+      propertyWithAdmin.photos.forEach((photo) => {
+        console.log(`   - Photo ${photo.id}: ${photo.file_url} (primary: ${photo.is_primary})`);
+      });
+    } else {
+      console.log(`ℹ️ Property ${property.id} has no photos after creation`);
+    }
+    
+    // If there was a photo creation error, log it but don't fail the request
+    if (photoCreationError) {
+      console.error('⚠️ Photo creation had errors but property was created:', photoCreationError.message);
+    }
 
     res.status(201).json({
       success: true,
       message: 'Property created successfully',
       data: {
         property: propertyWithAdmin
-      }
+      },
+      warning: photoCreationError ? `Property created but photo upload had issues: ${photoCreationError.message}` : undefined
     });
   } catch (error) {
     console.error('Create property error:', error);
+    
+    // Send detailed error message for validation errors
+    if (error.name === 'SequelizeValidationError') {
+      const validationErrors = error.errors.map((err) => err.message).join(', ');
+      return res.status(400).json({
+        success: false,
+        error: `Validation error: ${validationErrors}`
+      });
+    }
+    
+    if (error.name === 'SequelizeDatabaseError') {
+      return res.status(400).json({
+        success: false,
+        error: `Database error: ${error.message}`
+      });
+    }
+    
     res.status(500).json({
       success: false,
-      error: 'Internal server error'
+      error: error.message || 'Internal server error'
     });
   }
 };
@@ -289,16 +520,16 @@ const updateProperty = async (req, res) => {
       });
     }
 
-    await property.update({
+    // Build update data object
+    const updateData = {
       title,
-      description,
+      description: description !== undefined ? description : property.description,
       address,
       city,
-      state,
-      postal_code,
-      country,
+      state: state !== undefined ? state : property.state,
+      postal_code: postal_code ? postal_code.trim() : property.postal_code,
       property_type,
-      monthly_rent,
+      monthly_rent: monthly_rent !== undefined ? monthly_rent : property.monthly_rent,
       photo: updatedPhotoUrl,
       number_of_halls: toIntOrKeep(number_of_halls, property.number_of_halls),
       number_of_kitchens: toIntOrKeep(number_of_kitchens, property.number_of_kitchens),
@@ -306,18 +537,125 @@ const updateProperty = async (req, res) => {
       number_of_parking_spaces: toIntOrKeep(number_of_parking_spaces, property.number_of_parking_spaces),
       number_of_rooms: toIntOrKeep(number_of_rooms, property.number_of_rooms),
       number_of_gardens: toIntOrKeep(number_of_gardens, property.number_of_gardens)
-    });
+    };
+    
+    // Only include country if it's provided (empty string sets it to null)
+    if (country !== undefined) {
+      updateData.country = country && country.trim() ? country.trim() : null;
+    }
 
-    // Fetch the updated property with admin details
+    await property.update(updateData);
+
+    // If a new photo was uploaded, create or update PropertyPhoto record
+    if (req.file && req.file.filename) {
+      try {
+        // Files are saved to 'public/uploads/' directory (to match server static serving)
+        const backendRoot = path.join(__dirname, '..');
+        let relativePath = path.relative(backendRoot, req.file.path);
+        
+        // Normalize path separators for cross-platform compatibility
+        relativePath = relativePath.replace(/\\/g, '/');
+        
+        // Ensure the path starts with 'public/uploads/' for consistency
+        if (!relativePath.startsWith('public/uploads/')) {
+          // If the file is directly in public/uploads, ensure correct path
+          if (relativePath.startsWith('public/uploads')) {
+            relativePath = relativePath;
+          } else {
+            // Reconstruct the path correctly
+            relativePath = `public/uploads/${req.file.filename}`;
+          }
+        }
+        
+        console.log('📁 Update - File path details:', {
+          absolutePath: req.file.path,
+          relativePath: relativePath,
+          filename: req.file.filename,
+          backendRoot: backendRoot
+        });
+
+        // Get the file URL using the same utility as PropertyPhoto controller
+        const fileUrl = getFileUrl(relativePath, req);
+        
+        console.log('🔗 Update - Generated file URL:', fileUrl);
+
+        // Check if property already has photos
+        const existingPhotos = await PropertyPhoto.count({
+          where: { property_id: id }
+        });
+
+        const isPrimary = existingPhotos === 0;
+
+        // Verify file exists before creating record
+        const fullFilePath = path.join(backendRoot, relativePath);
+        if (!fs.existsSync(fullFilePath)) {
+          throw new Error(`File does not exist at expected path: ${fullFilePath}`);
+        }
+        
+        console.log('📸 Creating PropertyPhoto record for update:', {
+          filename: req.file.filename,
+          absolutePath: req.file.path,
+          relativePath: relativePath,
+          fileUrl: fileUrl,
+          propertyId: id,
+          adminId: req.admin.id,
+          isPrimary: isPrimary,
+          existingPhotos: existingPhotos,
+          fileExists: fs.existsSync(fullFilePath)
+        });
+
+        // Create PropertyPhoto record
+        const photoRecord = await PropertyPhoto.create({
+          admin_id: req.admin.id,
+          property_id: id,
+          file_path: relativePath,
+          file_url: fileUrl,
+          original_filename: req.file.originalname || req.file.filename,
+          file_size: req.file.size || 0,
+          mime_type: req.file.mimetype || 'image/jpeg',
+          is_primary: isPrimary // First photo is primary
+        });
+
+        console.log('✅ PropertyPhoto record created for updated photo:', {
+          photoId: photoRecord.id,
+          fileUrl: photoRecord.file_url,
+          filePath: photoRecord.file_path,
+          fileExists: fs.existsSync(fullFilePath)
+        });
+      } catch (photoError) {
+        console.error('❌ Failed to create PropertyPhoto record:', {
+          error: photoError.message,
+          stack: photoError.stack,
+          filename: req.file?.filename,
+          path: req.file?.path
+        });
+        // Don't fail the property update if photo record creation fails
+      }
+    } else {
+      console.log('ℹ️ No photo file uploaded with property update');
+    }
+
+    // Fetch the updated property with admin details and photos
     const updatedProperty = await Property.findByPk(id, {
       include: [
         {
           model: Admin,
           as: 'admin',
           attributes: ['id', 'name', 'email']
+        },
+        {
+          model: PropertyPhoto,
+          as: 'photos',
+          required: false,
+          order: [['is_primary', 'DESC'], ['created_at', 'DESC']]
         }
       ]
     });
+    
+    // Log photos for debugging
+    if (updatedProperty && updatedProperty.photos) {
+      console.log(`📸 Property ${id} has ${updatedProperty.photos.length} photo(s) after update`);
+    }
 
     res.json({
       success: true,

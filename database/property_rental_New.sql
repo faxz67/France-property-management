@@ -97,7 +97,7 @@ CREATE TABLE `admins` (
   KEY `idx_admins_role_status` (`role`,`status`),
   KEY `idx_admins_created_by` (`created_by`),
   CONSTRAINT `admins_created_by_foreign_idx` FOREIGN KEY (`created_by`) REFERENCES `admins` (`id`) ON DELETE SET NULL ON UPDATE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=13 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=37 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -108,9 +108,8 @@ LOCK TABLES `admins` WRITE;
 /*!40000 ALTER TABLE `admins` DISABLE KEYS */;
 set autocommit=0;
 INSERT INTO `admins` VALUES
-(3,'Mohamed Faisal','faisal@property.com','$2a$12$G5EpAoQd7MF3cwiiNmGZtu234NARgIvD8MhWv4N0aPs9xSc1L5OUW','ADMIN','ACTIVE','2025-10-10 05:31:43','2025-10-10 05:31:43',NULL,NULL,0,NULL,NULL,NULL,0,NULL,NULL),
 (4,'Mohamed Rahim','rahim@property.com','$2b$12$zOYFzwB0Cf/P4p95MDb33eGSc2nX3sMjFHU6RUbMVa4GY.IPtk9Qi','SUPER_ADMIN','ACTIVE','2025-10-10 05:46:02','2025-11-02 13:47:32',NULL,NULL,0,NULL,NULL,NULL,0,NULL,NULL),
-(12,'Mohamed Faisal','faisal786mf7@gmail.com','$2b$12$jCW7NcPHnw6wSiXh6X5MPOsZX0L16A4YXNh0MZ3xRnLjBz9SITB/e','SUPER_ADMIN','ACTIVE','2025-11-05 12:02:16','2025-11-05 12:02:16',NULL,NULL,0,NULL,NULL,NULL,0,NULL,4);
+(34,'Mohamed Faisaleyy','faisal7@gmail.com','$2b$12$h2pV6x.ucW/AlkE3BliKy.cjXqYDNjYuIMsAyTUQKe96VsFl7E3CO','ADMIN','ACTIVE','2025-11-22 11:02:16','2025-11-22 13:28:41',NULL,NULL,0,NULL,NULL,NULL,0,NULL,4);
 /*!40000 ALTER TABLE `admins` ENABLE KEYS */;
 UNLOCK TABLES;
 commit;
@@ -189,6 +188,7 @@ CREATE TABLE `bills` (
   `reminder_sent` tinyint(1) DEFAULT 0,
   `reminder_count` int(11) DEFAULT 0,
   `last_reminder_date` date DEFAULT NULL,
+  `deleted_at` datetime DEFAULT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `bills_tenant_id_month` (`tenant_id`,`month`),
   UNIQUE KEY `unique_bill_number` (`bill_number`),
@@ -200,10 +200,11 @@ CREATE TABLE `bills` (
   KEY `bills_month` (`month`),
   KEY `idx_bills_overdue` (`due_date`,`status`),
   KEY `idx_bills_admin_status_date` (`admin_id`,`status`,`due_date`),
+  KEY `idx_bills_deleted_at` (`deleted_at`),
   CONSTRAINT `bills_ibfk_136` FOREIGN KEY (`tenant_id`) REFERENCES `tenants` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
   CONSTRAINT `bills_ibfk_137` FOREIGN KEY (`property_id`) REFERENCES `properties` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
   CONSTRAINT `bills_ibfk_138` FOREIGN KEY (`admin_id`) REFERENCES `admins` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=23 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=33 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -214,9 +215,15 @@ LOCK TABLES `bills` WRITE;
 /*!40000 ALTER TABLE `bills` DISABLE KEYS */;
 set autocommit=0;
 INSERT INTO `bills` VALUES
-(5,7,7,4,499.99,499.99,0.00,499.99,'2025-11','2025-11-14','PENDING',NULL,'Facture mensuelle de loyer pour Mohamed Faisal\nPropriété: Rahim\nLoyer mensuel: €499.99\nTotal: €499.99','2025-10-19 09:43:13','2025-10-31 17:59:58','2025-11-01','fr','C:\\Users\\faisa\\Downloads\\Rahim Anna France Project Home Sharing\\project\\backend\\uploads\\bills\\bill_5_2025-11_1761933598292.pdf',NULL,NULL,0,0,NULL),
-(20,15,20,4,100.00,222.00,0.00,222.00,'2025-12','2025-12-12','PENDING',NULL,'Paiement de loyer mensuel','2025-11-02 14:54:37','2025-11-04 10:14:34','2025-11-02','fr','C:\\Users\\faisa\\Downloads\\Rahim Anna France Project Home Sharing\\project\\backend\\uploads\\bills\\bill_20_2025-12_1762251274832.pdf',NULL,NULL,0,0,NULL),
-(22,15,20,4,222.00,222.00,0.00,222.00,'2025-11','2025-11-14','PENDING',NULL,'Facture mensuelle de loyer pour hisham\nPropriété: Hisham\nLoyer mensuel: €222.00\nTotal: €222.00','2025-11-04 17:49:10','2025-11-04 18:04:53','2025-11-01','fr','C:\\Users\\faisa\\Downloads\\Rahim Anna France Project Home Sharing\\project\\backend\\uploads\\bills\\bill_22_2025-11_1762279493512.pdf',NULL,NULL,0,0,NULL);
+(24,7,7,4,1234.00,1234.00,0.00,1234.00,'2025-11','2025-11-14','OVERDUE',NULL,'Facture mensuelle de loyer pour Mohamed Faisal\nPropriété: Rahim\nLoyer mensuel: €1234.00\nTotal: €1234.00','2025-11-15 09:20:53','2025-11-15 10:00:00','2025-11-01','fr','C:\\Users\\faisa\\Downloads\\Rahim Anna France Project Home Sharing\\project\\backend\\uploads\\bills\\bill_24_2025-11_1763198457038.pdf',NULL,NULL,0,0,NULL,NULL),
+(25,16,7,4,25000.00,25000.00,0.00,25000.00,'2025-11','2025-11-14','OVERDUE',NULL,'Facture mensuelle de loyer pour Moahmed\nPropriété: Rahim\nLoyer mensuel: €25000.00\nTotal: €25000.00','2025-11-15 09:20:53','2025-11-15 10:00:00','2025-11-01','fr',NULL,NULL,NULL,0,0,NULL,NULL),
+(26,17,26,4,5500.00,5500.00,0.00,5500.00,'2025-11','2025-11-14','PENDING',NULL,'Facture mensuelle de loyer pour Shifa\nPropriété: Palce\nLoyer mensuel: €5500.00\nTotal: €5500.00','2025-11-22 10:28:59','2025-11-22 10:28:59','2025-11-01','fr',NULL,NULL,NULL,0,0,NULL,NULL),
+(27,18,32,34,600.00,500.00,100.00,600.00,'2025-11','2025-11-14','PAID','2025-11-22','Facture mensuelle de loyer pour Mohamed faisal\nPropriété: Faisal House\nLoyer mensuel: €500.00\nCharges d\'utilitaires: €100.00\nTotal: €600.00','2025-11-22 13:25:35','2025-11-22 14:50:52','2025-11-01','fr',NULL,NULL,NULL,0,0,NULL,NULL),
+(28,19,32,34,600.00,500.00,100.00,600.00,'2025-11','2025-11-14','PAID','2025-11-22','Facture mensuelle de loyer pour Mohamed Riswan\nPropriété: Faisal House\nLoyer mensuel: €500.00\nCharges d\'utilitaires: €100.00\nTotal: €600.00','2025-11-22 13:25:35','2025-11-22 14:50:56','2025-11-01','fr',NULL,NULL,NULL,0,0,NULL,NULL),
+(29,20,32,34,600.00,500.00,100.00,600.00,'2025-11','2025-11-14','PENDING',NULL,'Facture mensuelle de loyer pour Mohamed Rahim\nPropriété: Faisal House\nLoyer mensuel: €500.00\nCharges d\'utilitaires: €100.00\nTotal: €600.00','2025-11-22 13:25:35','2025-11-22 13:25:35','2025-11-01','fr',NULL,NULL,NULL,0,0,NULL,NULL),
+(30,21,32,34,600.00,525.00,75.00,600.00,'2025-11','2025-11-14','PENDING',NULL,'Facture mensuelle de loyer pour Mohamed Thavufic\nPropriété: Faisal House\nLoyer mensuel: €525.00\nCharges d\'utilitaires: €75.00\nTotal: €600.00','2025-11-22 13:25:35','2025-11-22 13:25:35','2025-11-01','fr',NULL,NULL,NULL,0,0,NULL,NULL),
+(31,22,32,34,600.00,400.00,200.00,600.00,'2025-11','2025-11-14','PENDING',NULL,'Facture mensuelle de loyer pour Shifa\nPropriété: Faisal House\nLoyer mensuel: €400.00\nCharges d\'utilitaires: €200.00\nTotal: €600.00','2025-11-22 13:25:35','2025-11-22 13:25:35','2025-11-01','fr',NULL,NULL,NULL,0,0,NULL,NULL),
+(32,23,32,34,516.00,511.00,5.00,516.00,'2025-11','2025-11-14','PAID','2025-11-22','Facture mensuelle de loyer pour Mohamed\nPropriété: Faisal House\nLoyer mensuel: €511.00\nCharges d\'utilitaires: €5.00\nTotal: €516.00','2025-11-22 13:26:38','2025-11-22 14:50:46','2025-11-01','fr','C:\\Users\\faisa\\Downloads\\Rahim Anna France Project Home Sharing\\project\\backend\\uploads\\bills\\bill_32_2025-11_1763818018281.pdf',NULL,NULL,0,0,NULL,NULL);
 /*!40000 ALTER TABLE `bills` ENABLE KEYS */;
 UNLOCK TABLES;
 commit;
@@ -282,6 +289,7 @@ CREATE TABLE `expenses` (
   `vendor_name` varchar(255) DEFAULT NULL,
   `payment_method` enum('CARD','BANK_TRANSFER','CASH','CHECK','OTHER') DEFAULT NULL,
   `receipt_path` varchar(500) DEFAULT NULL,
+  `deleted_at` datetime DEFAULT NULL,
   PRIMARY KEY (`id`),
   KEY `expenses_property_id` (`property_id`),
   KEY `expenses_admin_id` (`admin_id`),
@@ -291,7 +299,7 @@ CREATE TABLE `expenses` (
   KEY `idx_expenses_admin_month` (`admin_id`,`month`),
   CONSTRAINT `expenses_ibfk_89` FOREIGN KEY (`property_id`) REFERENCES `properties` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
   CONSTRAINT `expenses_ibfk_90` FOREIGN KEY (`admin_id`) REFERENCES `admins` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=24 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=40 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -302,15 +310,15 @@ LOCK TABLES `expenses` WRITE;
 /*!40000 ALTER TABLE `expenses` DISABLE KEYS */;
 set autocommit=0;
 INSERT INTO `expenses` VALUES
-(7,NULL,3,'2025-10','Electricity Bill',500.00,NULL,'2025-10-15 00:00:00','2025-10-15 09:36:06',NULL,NULL,NULL,NULL,NULL,NULL),
-(8,NULL,3,'2025-10','Repairs & Renovations',100.00,NULL,'2025-10-15 00:00:00','2025-10-15 09:36:17',NULL,NULL,NULL,NULL,NULL,NULL),
-(9,NULL,3,'2025-10','Insurance',500.00,NULL,'2025-10-15 00:00:00','2025-10-15 09:36:26',NULL,NULL,NULL,NULL,NULL,NULL),
-(10,NULL,3,'2025-10','Property Tax',123.00,NULL,'2025-10-15 00:00:00','2025-10-15 09:36:33',NULL,NULL,NULL,NULL,NULL,NULL),
-(11,NULL,3,'2025-10','Water Bill',123.00,NULL,'2025-10-15 00:00:00','2025-10-15 09:38:31',NULL,NULL,NULL,NULL,NULL,NULL),
-(12,NULL,3,'2025-10','Internet / Wi-Fi',100.00,NULL,'2025-10-15 00:00:00','2025-10-15 09:41:44',NULL,NULL,NULL,NULL,NULL,NULL),
-(13,NULL,3,'2025-10','Property Tax',22.00,NULL,'2025-10-15 00:00:00','2025-10-15 10:56:05',NULL,NULL,NULL,NULL,NULL,NULL),
-(22,NULL,4,'2025-11','Internet / Wi-Fi',123.00,NULL,'2025-11-02 00:00:00','2025-11-02 14:51:41',NULL,NULL,NULL,NULL,NULL,NULL),
-(23,NULL,4,'2025-11','Cleaning & Housekeeping',500.00,NULL,'2025-11-04 00:00:00','2025-11-04 18:06:57',NULL,NULL,NULL,NULL,NULL,NULL);
+(22,NULL,4,'2025-11','Internet / Wi-Fi',123.00,NULL,'2025-11-02 00:00:00','2025-11-02 14:51:41',NULL,NULL,NULL,NULL,NULL,NULL,NULL),
+(23,NULL,4,'2025-11','Cleaning & Housekeeping',500.00,NULL,'2025-11-04 00:00:00','2025-11-04 18:06:57',NULL,NULL,NULL,NULL,NULL,NULL,NULL),
+(29,NULL,4,'2025-11','Electricity Bill',500.00,NULL,'2025-11-15 00:00:00','2025-11-15 09:48:51',NULL,NULL,NULL,NULL,NULL,NULL,NULL),
+(30,NULL,4,'2025-11','Electricity Bill',500.00,NULL,'2025-11-15 00:00:00','2025-11-15 09:53:49',NULL,NULL,NULL,NULL,NULL,NULL,NULL),
+(35,30,4,'2025-11','Electricity Bill',500.00,NULL,'2025-11-16 00:00:00','2025-11-16 15:16:09',NULL,NULL,NULL,NULL,NULL,NULL,NULL),
+(36,7,4,'2025-11','Electricity Bill',500.00,NULL,'2025-11-16 00:00:00','2025-11-16 15:27:17',NULL,NULL,NULL,NULL,NULL,NULL,NULL),
+(37,32,34,'2025-11','Electricity Bill',499.99,NULL,'2025-11-22 00:00:00','2025-11-22 13:29:39',NULL,NULL,NULL,NULL,NULL,NULL,NULL),
+(38,32,34,'2025-11','Electricity Bill',5000.00,NULL,'2025-11-22 00:00:00','2025-11-22 14:50:04',NULL,NULL,NULL,NULL,NULL,NULL,NULL),
+(39,32,34,'2025-11','Security Staff Salary',250.00,NULL,'2025-11-22 00:00:00','2025-11-22 14:50:12',NULL,NULL,NULL,NULL,NULL,NULL,NULL);
 /*!40000 ALTER TABLE `expenses` ENABLE KEYS */;
 UNLOCK TABLES;
 commit;
@@ -522,7 +530,7 @@ CREATE TABLE `profits` (
   PRIMARY KEY (`id`),
   KEY `profits_admin_id` (`admin_id`),
   CONSTRAINT `profits_ibfk_1` FOREIGN KEY (`admin_id`) REFERENCES `admins` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -533,7 +541,8 @@ LOCK TABLES `profits` WRITE;
 /*!40000 ALTER TABLE `profits` DISABLE KEYS */;
 set autocommit=0;
 INSERT INTO `profits` VALUES
-(1,4,444.00,'2025-11-01 10:44:52','2025-10-19 09:54:26','2025-11-01 10:44:52');
+(1,4,444.00,'2025-11-01 10:44:52','2025-10-19 09:54:26','2025-11-01 10:44:52'),
+(3,34,1716.00,'2025-11-22 14:50:56','2025-11-22 14:50:46','2025-11-22 14:50:56');
 /*!40000 ALTER TABLE `profits` ENABLE KEYS */;
 UNLOCK TABLES;
 commit;
@@ -553,8 +562,8 @@ CREATE TABLE `properties` (
   `address` varchar(500) NOT NULL,
   `city` varchar(100) NOT NULL,
   `state` varchar(100) DEFAULT NULL,
-  `postal_code` varchar(20) DEFAULT NULL,
-  `country` varchar(100) NOT NULL,
+  `postal_code` varchar(20) NOT NULL,
+  `country` varchar(100) DEFAULT NULL,
   `property_type` enum('APARTMENT','HOUSE','CONDO','STUDIO','OTHER') NOT NULL DEFAULT 'APARTMENT',
   `monthly_rent` decimal(10,2) DEFAULT NULL,
   `created_at` datetime NOT NULL,
@@ -573,6 +582,7 @@ CREATE TABLE `properties` (
   `furnished` tinyint(1) DEFAULT 0,
   `available_from` date DEFAULT NULL,
   `status` enum('AVAILABLE','OCCUPIED','MAINTENANCE','UNAVAILABLE') DEFAULT 'AVAILABLE',
+  `deleted_at` datetime DEFAULT NULL,
   PRIMARY KEY (`id`),
   KEY `properties_admin_id` (`admin_id`),
   KEY `properties_property_type` (`property_type`),
@@ -580,8 +590,10 @@ CREATE TABLE `properties` (
   KEY `idx_properties_status` (`status`),
   KEY `idx_properties_available` (`available_from`,`status`),
   KEY `idx_properties_admin_status` (`admin_id`,`status`),
+  KEY `properties_city_postal_code` (`city`,`postal_code`),
+  KEY `idx_properties_deleted_at` (`deleted_at`),
   CONSTRAINT `properties_ibfk_1` FOREIGN KEY (`admin_id`) REFERENCES `admins` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=22 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=33 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -592,8 +604,11 @@ LOCK TABLES `properties` WRITE;
 /*!40000 ALTER TABLE `properties` DISABLE KEYS */;
 set autocommit=0;
 INSERT INTO `properties` VALUES
-(7,4,'Rahim',NULL,'167,Main Road','Karaikal',NULL,NULL,'India','APARTMENT',499.99,'2025-10-15 12:11:08','2025-10-18 10:17:48',NULL,1,2,3,5,1,2,NULL,NULL,0,0,0,NULL,'AVAILABLE'),
-(20,4,'Hisham',NULL,'Main road','Karaikal',NULL,NULL,'India','APARTMENT',222.00,'2025-11-02 14:50:17','2025-11-02 14:50:17',NULL,1,2,34,2,2,4,NULL,NULL,0,0,0,NULL,'AVAILABLE');
+(7,4,'Rahim',NULL,'167,Main Road','Karaikal',NULL,'00000','India','APARTMENT',499.99,'2025-10-15 12:11:08','2025-11-14 13:38:06',NULL,1,2,3,5,1,2,NULL,NULL,0,0,0,NULL,'AVAILABLE',NULL),
+(26,4,'Palce',NULL,'167 Mian road','Paris',NULL,'60322',NULL,'APARTMENT',5500.00,'2025-11-14 13:39:19','2025-11-14 13:39:19','http://localhost:4002/uploads/1763127559305-395718018-Logo.jpg',12,12,1,0,1,1,NULL,NULL,0,0,0,NULL,'AVAILABLE',NULL),
+(30,4,'Palace',NULL,'167,main Road','Paris',NULL,'40025',NULL,'APARTMENT',202.00,'2025-11-14 15:34:35','2025-11-14 15:34:35','http://localhost:4002/uploads/1763134475326-2898733-noun-tiles-1656668.png',0,0,0,0,0,0,NULL,NULL,0,0,0,NULL,'AVAILABLE',NULL),
+(31,4,'mss',NULL,'167 main road','paris',NULL,'paris',NULL,'APARTMENT',500000.00,'2025-11-22 10:11:55','2025-11-22 10:11:55','http://localhost:4002/uploads/1763806315541-65124289-Screenshot_2025-11-17_191022.png',2,5,5,45,5,2,NULL,NULL,0,0,0,NULL,'AVAILABLE',NULL),
+(32,34,'Faisal House',NULL,'167,Main Road','Karaikal',NULL,'609601',NULL,'APARTMENT',5000.00,'2025-11-22 13:19:13','2025-11-22 13:19:13','http://localhost:4002/uploads/1763817553249-679899632-Screenshot_2025-11-17_191022.png',2,2,1,2,5,1,NULL,NULL,0,0,0,NULL,'AVAILABLE',NULL);
 /*!40000 ALTER TABLE `properties` ENABLE KEYS */;
 UNLOCK TABLES;
 commit;
@@ -619,6 +634,7 @@ CREATE TABLE `property_photos` (
   `updated_at` datetime NOT NULL,
   `display_order` int(11) DEFAULT 0,
   `caption` varchar(255) DEFAULT NULL,
+  `deleted_at` datetime DEFAULT NULL,
   PRIMARY KEY (`id`),
   KEY `property_photos_admin_id` (`admin_id`),
   KEY `property_photos_property_id` (`property_id`),
@@ -626,7 +642,7 @@ CREATE TABLE `property_photos` (
   KEY `idx_photos_display_order` (`property_id`,`display_order`),
   CONSTRAINT `property_photos_ibfk_89` FOREIGN KEY (`admin_id`) REFERENCES `admins` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
   CONSTRAINT `property_photos_ibfk_90` FOREIGN KEY (`property_id`) REFERENCES `properties` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=11 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=18 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -637,9 +653,12 @@ LOCK TABLES `property_photos` WRITE;
 /*!40000 ALTER TABLE `property_photos` DISABLE KEYS */;
 set autocommit=0;
 INSERT INTO `property_photos` VALUES
-(8,4,20,'public\\uploads\\4\\properties\\20\\Screenshot_2025_06_27_232220-1762349095178-399057362.png','http://localhost:4002/uploads/4/properties/20/Screenshot_2025_06_27_232220-1762349095178-399057362.png','Screenshot 2025-06-27 232220.png',287572,'image/png',0,'2025-11-05 13:24:55','2025-11-05 13:25:16',0,NULL),
-(9,4,20,'public\\uploads\\4\\properties\\20\\Screenshot_2025_06_30_004012-1762349114058-699512697.png','http://localhost:4002/uploads/4/properties/20/Screenshot_2025_06_30_004012-1762349114058-699512697.png','Screenshot 2025-06-30 004012.png',407759,'image/png',1,'2025-11-05 13:25:14','2025-11-05 13:25:16',0,NULL),
-(10,4,7,'public\\uploads\\4\\properties\\7\\Screenshot_2025_07_19_182617-1762349267553-983029950.png','http://localhost:4002/uploads/4/properties/7/Screenshot_2025_07_19_182617-1762349267553-983029950.png','Screenshot 2025-07-19 182617.png',394541,'image/png',1,'2025-11-05 13:27:47','2025-11-05 13:27:47',0,NULL);
+(10,4,7,'public\\uploads\\4\\properties\\7\\Screenshot_2025_07_19_182617-1762349267553-983029950.png','http://localhost:4002/uploads/4/properties/7/Screenshot_2025_07_19_182617-1762349267553-983029950.png','Screenshot 2025-07-19 182617.png',394541,'image/png',1,'2025-11-05 13:27:47','2025-11-05 13:27:47',0,NULL,NULL),
+(12,4,26,'public\\uploads\\4\\properties\\26\\Logo-1763127567995-797190077.jpg','http://localhost:4002/uploads/4/properties/26/Logo-1763127567995-797190077.jpg','Logo.jpg',55888,'image/jpeg',1,'2025-11-14 13:39:27','2025-11-14 13:46:22',0,NULL,NULL),
+(14,4,26,'public\\uploads\\4\\properties\\26\\Screenshot_2025_11_05_184606-1763127963054-220989927.png','http://localhost:4002/uploads/4/properties/26/Screenshot_2025_11_05_184606-1763127963054-220989927.png','Screenshot 2025-11-05 184606.png',82762,'image/png',0,'2025-11-14 13:46:03','2025-11-14 13:46:22',0,NULL,NULL),
+(15,4,30,'public\\uploads\\4\\properties\\30\\noun_tiles_1656668-1763134484276-803733953.png','http://localhost:4002/uploads/4/properties/30/noun_tiles_1656668-1763134484276-803733953.png','noun-tiles-1656668.png',15733,'image/png',1,'2025-11-14 15:34:44','2025-11-14 15:34:44',0,NULL,NULL),
+(16,4,31,'public/uploads/1763806315541-65124289-Screenshot_2025-11-17_191022.png','http://localhost:4002/uploads/1763806315541-65124289-Screenshot_2025-11-17_191022.png','Screenshot 2025-11-17 191022.png',1803454,'image/png',1,'2025-11-22 10:11:55','2025-11-22 10:11:55',0,NULL,NULL),
+(17,34,32,'public/uploads/1763817553249-679899632-Screenshot_2025-11-17_191022.png','http://localhost:4002/uploads/1763817553249-679899632-Screenshot_2025-11-17_191022.png','Screenshot 2025-11-17 191022.png',1803454,'image/png',1,'2025-11-22 13:19:13','2025-11-22 13:19:13',0,NULL,NULL);
 /*!40000 ALTER TABLE `property_photos` ENABLE KEYS */;
 UNLOCK TABLES;
 commit;
@@ -745,6 +764,7 @@ CREATE TABLE `tenant_documents` (
   `is_verified` tinyint(1) DEFAULT 0,
   `verified_at` timestamp NULL DEFAULT NULL,
   `verified_by` int(11) DEFAULT NULL,
+  `deleted_at` datetime DEFAULT NULL,
   PRIMARY KEY (`id`),
   KEY `tenant_documents_admin_id` (`admin_id`),
   KEY `tenant_documents_tenant_id` (`tenant_id`),
@@ -763,8 +783,6 @@ CREATE TABLE `tenant_documents` (
 LOCK TABLES `tenant_documents` WRITE;
 /*!40000 ALTER TABLE `tenant_documents` DISABLE KEYS */;
 set autocommit=0;
-INSERT INTO `tenant_documents` VALUES
-(2,4,15,'public\\uploads\\4\\tenants\\15\\gimi-1762349136554-682246981.png','http://localhost:4002/uploads/4/tenants/15/gimi-1762349136554-682246981.png','gimi.png',32657,'image/png','General','2025-11-05 13:25:36','2025-11-05 13:25:36',NULL,NULL,0,NULL,NULL);
 /*!40000 ALTER TABLE `tenant_documents` ENABLE KEYS */;
 UNLOCK TABLES;
 commit;
@@ -798,6 +816,9 @@ CREATE TABLE `tenants` (
   `security_deposit` decimal(10,2) DEFAULT NULL,
   `move_out_date` date DEFAULT NULL,
   `notes` text DEFAULT NULL,
+  `address` varchar(500) DEFAULT NULL COMMENT 'Tenant address',
+  `charges_amount` decimal(10,2) DEFAULT NULL COMMENT 'Optional charges amount for the tenant',
+  `deleted_at` datetime DEFAULT NULL,
   PRIMARY KEY (`id`),
   KEY `tenants_admin_id` (`admin_id`),
   KEY `tenants_property_id` (`property_id`),
@@ -805,9 +826,10 @@ CREATE TABLE `tenants` (
   KEY `tenants_lease_start_lease_end` (`lease_start`,`lease_end`),
   KEY `idx_tenants_email` (`email`),
   KEY `idx_tenants_property_status` (`property_id`,`status`),
+  KEY `idx_tenants_deleted_at` (`deleted_at`),
   CONSTRAINT `tenants_ibfk_93` FOREIGN KEY (`admin_id`) REFERENCES `admins` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
   CONSTRAINT `tenants_ibfk_94` FOREIGN KEY (`property_id`) REFERENCES `properties` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=16 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=24 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -818,8 +840,15 @@ LOCK TABLES `tenants` WRITE;
 /*!40000 ALTER TABLE `tenants` DISABLE KEYS */;
 set autocommit=0;
 INSERT INTO `tenants` VALUES
-(7,4,7,'Mohamed Faisal','faisal786mf7@gmail.com','07358874293',NULL,NULL,1234.00,'2025-10-18','ACTIVE','2025-10-18 10:04:55','2025-10-19 10:40:51',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL),
-(15,4,20,'hisham','faisal786mf7@gmail.com','07358874293',NULL,NULL,250.00,'2025-11-02','ACTIVE','2025-11-02 14:50:36','2025-11-02 14:50:36',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL);
+(7,4,7,'Mohamed Faisal','faisal786mf7@gmail.com','07358874293',NULL,NULL,1234.00,'2025-10-18','ACTIVE','2025-10-18 10:04:55','2025-11-16 15:16:18',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL),
+(16,4,7,'Moahmed','faisal786@gmail.com','7358874283',NULL,NULL,25000.00,'2025-11-14','ACTIVE','2025-11-14 15:43:48','2025-11-16 15:22:29',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL),
+(17,4,26,'Shifa','faisal786mf7@gmail.com','7358874293',NULL,NULL,250.00,'2025-11-15','ACTIVE','2025-11-15 07:20:46','2025-11-22 09:56:10',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,'167 Main Road',NULL,NULL),
+(18,34,32,'Mohamed faisal','faisal786mf7@gmail.com','08098756709',NULL,NULL,500.00,'2025-11-22','ACTIVE','2025-11-22 13:20:34','2025-11-22 13:20:34',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,'Main road ambagarathur',100.00,NULL),
+(19,34,32,'Mohamed Riswan','faisal786@gmail.com','07358874293',NULL,NULL,500.00,'2025-11-22','ACTIVE','2025-11-22 13:22:22','2025-11-22 13:22:22',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,'Main road karaikal',100.00,NULL),
+(20,34,32,'Mohamed Rahim','faisal@gmail.com','97915970748',NULL,NULL,500.00,'2025-11-22','ACTIVE','2025-11-22 13:23:14','2025-11-22 13:23:14',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,'Main Road Chennai',100.00,NULL),
+(21,34,32,'Mohamed Thavufic','thavufic@gmail.com','9876541230',NULL,NULL,525.00,'2025-11-22','ACTIVE','2025-11-22 13:24:12','2025-11-22 13:24:12',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,'Main Road Dubai',75.00,NULL),
+(22,34,32,'Shifa','shiaf123@gamil.com','9585697190',NULL,NULL,400.00,'2025-11-22','ACTIVE','2025-11-22 13:25:28','2025-11-22 13:25:28',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,'pallivasal street Ambagarathur',200.00,NULL),
+(23,34,32,'Mohamed','mohamed@gmail.com',NULL,NULL,NULL,511.00,'2025-11-22','ACTIVE','2025-11-22 13:26:33','2025-11-22 13:26:33',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,'Main Road Karaikal',5.00,NULL);
 /*!40000 ALTER TABLE `tenants` ENABLE KEYS */;
 UNLOCK TABLES;
 commit;
@@ -959,4 +988,4 @@ SET character_set_client = @saved_cs_client;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*M!100616 SET NOTE_VERBOSITY=@OLD_NOTE_VERBOSITY */;
 
--- Dump completed on 2025-11-05 19:24:41
+-- Dump completed on 2025-11-22 20:37:38

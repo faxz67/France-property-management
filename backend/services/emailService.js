@@ -37,7 +37,7 @@ class EmailService {
    * @returns {String} HTML content
    */
   generateReceiptEmailContent(bill) {
-    const greeting = `Dear ${bill.tenant.name},`;
+    const greeting = `Cher/Chère ${bill.tenant.name},`;
 
     return `
       <!DOCTYPE html>
@@ -45,7 +45,7 @@ class EmailService {
       <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Rent Receipt</title>
+        <title>Quittance de Loyer</title>
         <style>
           body {
             font-family: Arial, sans-serif;
@@ -102,92 +102,92 @@ class EmailService {
       </head>
       <body>
         <div class="header">
-          <h2>Property Management System</h2>
-          <p>Rent Receipt Notification</p>
+          <h2>Système de Gestion Immobilière</h2>
+          <p>Notification de Quittance de Loyer</p>
         </div>
         
         <div class="content">
           <p>${greeting}</p>
           
-          <p>Please find attached the rent receipt for the following payment:</p>
+          <p>Veuillez trouver ci-joint la quittance de loyer pour le paiement suivant :</p>
           
           <div class="bill-details">
-            <h3>Receipt Details</h3>
+            <h3>Détails du reçu</h3>
             <table>
               <tr>
-                <th>Receipt Number:</th>
+                <th>Numéro de reçu :</th>
                 <td>#${bill.id}</td>
               </tr>
               <tr>
-                <th>Month:</th>
+                <th>Mois :</th>
                 <td>${bill.month}</td>
               </tr>
               <tr>
-                <th>Due Date:</th>
-                <td>${new Date(bill.due_date).toLocaleDateString()}</td>
+                <th>Date d'échéance :</th>
+                <td>${new Date(bill.due_date).toLocaleDateString('fr-FR')}</td>
               </tr>
               <tr>
-                <th>Amount:</th>
-                <td class="highlight">$${parseFloat(bill.amount).toFixed(2)}</td>
+                <th>Montant :</th>
+                <td class="highlight">${parseFloat(bill.amount).toFixed(2)}€</td>
               </tr>
               <tr>
-                <th>Status:</th>
+                <th>Statut :</th>
                 <td>${bill.status}</td>
               </tr>
             </table>
             
-            <h3>Property Information</h3>
+            <h3>Informations de la propriété</h3>
             <table>
               <tr>
-                <th>Property:</th>
+                <th>Propriété :</th>
                 <td>${bill.property.title}</td>
               </tr>
               <tr>
-                <th>Address:</th>
+                <th>Adresse :</th>
                 <td>${bill.property.address}</td>
               </tr>
               <tr>
-                <th>City:</th>
+                <th>Ville :</th>
                 <td>${bill.property.city}</td>
               </tr>
             </table>
             
-            <h3>Tenant Information</h3>
+            <h3>Informations du locataire</h3>
             <table>
               <tr>
-                <th>Name:</th>
+                <th>Nom :</th>
                 <td>${bill.tenant.name}</td>
               </tr>
               <tr>
-                <th>Email:</th>
+                <th>Email :</th>
                 <td>${bill.tenant.email || 'N/A'}</td>
               </tr>
               <tr>
-                <th>Phone:</th>
+                <th>Téléphone :</th>
                 <td>${bill.tenant.phone || 'N/A'}</td>
               </tr>
             </table>
             
-            <h3>Admin Information</h3>
+            <h3>Informations de l'administrateur</h3>
             <table>
               <tr>
-                <th>Name:</th>
+                <th>Nom :</th>
                 <td>${bill.admin.name}</td>
               </tr>
               <tr>
-                <th>Email:</th>
+                <th>Email :</th>
                 <td>${bill.admin.email || 'N/A'}</td>
               </tr>
             </table>
           </div>
           
-          <p>Please keep this receipt for your records. If you have any questions, please contact us.</p>
+          <p>Veuillez conserver ce reçu pour vos archives. Si vous avez des questions, veuillez nous contacter.</p>
           
-          <p>Thank you for your business!</p>
+          <p>Merci pour votre confiance !</p>
         </div>
         
         <div class="footer">
-          <p>This is an automated message from the Property Management System.</p>
+          <p>Ceci est un message automatique du Système de Gestion Immobilière.</p>
           <p>Generated on ${new Date().toLocaleString()}</p>
         </div>
       </body>
@@ -217,7 +217,7 @@ class EmailService {
       <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>System Notification</title>
+        <title>Notification Système</title>
         <style>
           body {
             font-family: Arial, sans-serif;
@@ -251,7 +251,7 @@ class EmailService {
       </head>
       <body>
         <div class="header">
-          <h2>Property Management System</h2>
+          <h2>Système de Gestion Immobilière</h2>
           <p>System Notification</p>
         </div>
         
@@ -260,7 +260,7 @@ class EmailService {
         </div>
         
         <div class="footer">
-          <p>This is an automated message from the Property Management System.</p>
+          <p>Ceci est un message automatique du Système de Gestion Immobilière.</p>
           <p>Generated on ${new Date().toLocaleString()}</p>
         </div>
       </body>
