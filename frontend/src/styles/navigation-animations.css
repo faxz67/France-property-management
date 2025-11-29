@@ -1,0 +1,230 @@
+/* Professional Navigation Animations */
+
+/* ===== BASIC ANIMATIONS ===== */
+@keyframes slideInFromLeft {
+  0% {
+    transform: translateX(-20px);
+    opacity: 0;
+  }
+  100% {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slideInFromRight {
+  0% {
+    transform: translateX(20px);
+    opacity: 0;
+  }
+  100% {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes fadeInUp {
+  0% {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  100% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes scaleIn {
+  0% {
+    transform: scale(0.95);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-5px);
+  }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+@keyframes bounce {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-3px);
+  }
+}
+
+@keyframes glow {
+  0%, 100% {
+    box-shadow: 0 0 5px rgba(59, 130, 246, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 20px rgba(59, 130, 246, 0.6);
+  }
+}
+
+/* ===== NAVIGATION ANIMATIONS ===== */
+.nav-item-enter {
+  animation: slideInFromLeft 0.6s ease-out;
+}
+
+.nav-item-enter-delay-1 {
+  animation: slideInFromLeft 0.6s ease-out;
+  animation-delay: 0.1s;
+  animation-fill-mode: both;
+}
+
+.nav-item-enter-delay-2 {
+  animation: slideInFromLeft 0.6s ease-out;
+  animation-delay: 0.2s;
+  animation-fill-mode: both;
+}
+
+.nav-item-enter-delay-3 {
+  animation: slideInFromLeft 0.6s ease-out;
+  animation-delay: 0.3s;
+  animation-fill-mode: both;
+}
+
+.nav-item-enter-delay-4 {
+  animation: slideInFromLeft 0.6s ease-out;
+  animation-delay: 0.4s;
+  animation-fill-mode: both;
+}
+
+.nav-item-enter-delay-5 {
+  animation: slideInFromLeft 0.6s ease-out;
+  animation-delay: 0.5s;
+  animation-fill-mode: both;
+}
+
+.nav-item-enter-delay-6 {
+  animation: slideInFromLeft 0.6s ease-out;
+  animation-delay: 0.6s;
+  animation-fill-mode: both;
+}
+
+.nav-item-enter-delay-7 {
+  animation: slideInFromLeft 0.6s ease-out;
+  animation-delay: 0.7s;
+  animation-fill-mode: both;
+}
+
+/* ===== HOVER EFFECTS ===== */
+.nav-hover-lift {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.nav-hover-lift:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+}
+
+.nav-hover-scale {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.nav-hover-scale:hover {
+  transform: scale(1.05);
+}
+
+.nav-hover-glow {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.nav-hover-glow:hover {
+  box-shadow: 0 0 20px rgba(59, 130, 246, 0.4);
+}
+
+/* ===== ACTIVE STATE ANIMATIONS ===== */
+.nav-active-pulse {
+  animation: pulse 2s ease-in-out infinite;
+}
+
+.nav-active-glow {
+  animation: glow 2s ease-in-out infinite;
+}
+
+.nav-active-bounce {
+  animation: bounce 1s ease-in-out infinite;
+}
+
+/* ===== ICON ANIMATIONS ===== */
+.nav-icon-float {
+  animation: float 3s ease-in-out infinite;
+}
+
+.nav-icon-float-delay {
+  animation: float 3s ease-in-out infinite;
+  animation-delay: 0.5s;
+}
+
+/* ===== CONTENT ANIMATIONS ===== */
+.content-fade-in {
+  animation: fadeInUp 0.8s ease-out;
+}
+
+.content-scale-in {
+  animation: scaleIn 0.6s ease-out;
+}
+
+/* ===== SMOOTH TRANSITIONS ===== */
+.nav-transition {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.nav-transition-fast {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.nav-transition-slow {
+  transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ===== RESPONSIVE ANIMATIONS ===== */
+@media (prefers-reduced-motion: reduce) {
+  .nav-item-enter,
+  .nav-item-enter-delay-1,
+  .nav-item-enter-delay-2,
+  .nav-item-enter-delay-3,
+  .nav-item-enter-delay-4,
+  .nav-item-enter-delay-5,
+  .nav-item-enter-delay-6,
+  .nav-item-enter-delay-7,
+  .nav-active-pulse,
+  .nav-active-glow,
+  .nav-active-bounce,
+  .nav-icon-float,
+  .nav-icon-float-delay {
+    animation: none !important;
+  }
+  
+  .nav-hover-lift:hover,
+  .nav-hover-scale:hover {
+    transform: none !important;
+  }
+}
+
+
+/* Hover scale effect */
+.nav-hover-scale:hover {
+  transform: scale(1.05);
+}
