@@ -328,59 +328,168 @@ class PDFService {
 
         doc.moveDown(1);
 
-        // Landlord Information (Bailleur)
-        doc.fontSize(10)
-           .font('Helvetica')
-           .text(frenchContent.landlordInfo.name, 60, doc.y);
+        // ============================================
+        // PROFESSIONAL TWO-COLUMN LAYOUT
+        // Left: Property Details | Right: Tenant Details
+        // ============================================
+        const sectionStartY = doc.y;
 
-        doc.moveDown(0.3);
+        // Get all data first for both sections
+        const propertyName = bill.property?.title || frenchContent.propertyInfo?.name || 'Non renseigné';
+        const propertyAddress = bill.property?.address || frenchContent.propertyInfo?.address || 'Non renseigné';
+        const propertyCity = bill.property?.city || frenchContent.propertyInfo?.city || 'Non renseigné';
+        const propertyPostalCode = bill.property?.postal_code || frenchContent.propertyInfo?.postalCode || '';
+        const propertyCountry = bill.property?.country || frenchContent.propertyInfo?.country || 'France';
         
-        doc.fontSize(10)
-           .font('Helvetica')
-           .text(frenchContent.landlordInfo.company || 'Gestion Locative', 60, doc.y);
-
-        doc.moveDown(0.3);
-        
-        // Address removed as requested
-
-        doc.moveDown(0.3);
-        
-        doc.fontSize(10)
-           .font('Helvetica')
-           .text(`${frenchContent.landlordInfo.postalCode || '75001'} ${frenchContent.landlordInfo.city || 'Paris'}, ${frenchContent.landlordInfo.country || 'France'}`, 60, doc.y);
-
-        doc.moveDown(1);
-
-        // Tenant Information (Locataire) - aligned to right
         const tenantName = frenchContent.tenantInfo.name || bill.tenant?.name || 'Non renseigné';
+        const tenantEmail = frenchContent.tenantInfo.email || bill.tenant?.email || 'Non renseigné';
+        const tenantPhone = frenchContent.tenantInfo.phone || bill.tenant?.phone || 'Non renseigné';
+        const tenantAddress = frenchContent.tenantInfo.address || bill.tenant?.address || 'Non renseigné';
         
-        // Store current Y position for tenant info (same as landlord section start)
-        const tenantInfoY = doc.y;
+        // Log property data for debugging
+        console.log(`🏠 [generateBillPDF] Property details for bill ${bill.id}:`, {
+          name: propertyName,
+          address: propertyAddress,
+          city: propertyCity,
+          postalCode: propertyPostalCode,
+          country: propertyCountry,
+          rawProperty: bill.property ? {
+            id: bill.property.id,
+            title: bill.property.title,
+            address: bill.property.address,
+            city: bill.property.city
+          } : 'N/A',
+          fromFrenchContent: frenchContent.propertyInfo?.name || 'N/A'
+        });
         
-        // Tenant label
+        // ============================================
+        // LEFT SIDE: Property Information
+        // ============================================
+        const leftX = 60;
+        let propertyY = sectionStartY;
+        
+        // Property section title - left aligned
         doc.fontSize(11)
            .font('Helvetica-Bold')
-           .text('Nom, prénom du locataire', 350, tenantInfoY);
+           .text('ADRESSE DE LA LOCATION', leftX, propertyY);
         
-        // Tenant name - positioned below the label
+        propertyY += 18;
+        
+        // Property name (title)
+        if (propertyName && propertyName !== 'Non renseigné') {
+          doc.fontSize(10)
+             .font('Helvetica')
+             .text(propertyName, leftX, propertyY);
+          propertyY += 15;
+        }
+        
+        // Property address
+        if (propertyAddress && propertyAddress !== 'Non renseigné') {
+          doc.fontSize(10)
+             .font('Helvetica')
+             .text(propertyAddress, leftX, propertyY, { width: 240 });
+          propertyY += 15;
+        }
+        
+        // City and postal code
+        const cityLineParts = [];
+        if (propertyCity && propertyCity !== 'Non renseigné') {
+          cityLineParts.push(propertyCity);
+        }
+        if (propertyPostalCode) {
+          cityLineParts.push(propertyPostalCode);
+        }
+        if (cityLineParts.length > 0) {
+          doc.fontSize(10)
+             .font('Helvetica')
+             .text(cityLineParts.join(' '), leftX, propertyY);
+          propertyY += 15;
+        }
+        
+        // Country (only if not France)
+        if (propertyCountry && propertyCountry !== 'France') {
+          doc.fontSize(10)
+             .font('Helvetica')
+             .text(propertyCountry, leftX, propertyY);
+          propertyY += 15;
+        }
+        
+        const propertySectionHeight = propertyY - sectionStartY;
+        
+        // ============================================
+        // RIGHT SIDE: Tenant Information
+        // ============================================
+        const rightAlignX = 60;
+        const rightAlignWidth = 475;
+        let tenantY = sectionStartY;
+        
+        // Tenant title - aligned to right
+        doc.fontSize(11)
+           .font('Helvetica-Bold')
+           .text('LOCATAIRE', rightAlignX, tenantY, { 
+             width: rightAlignWidth, 
+             align: 'right' 
+           });
+        
+        tenantY += 18;
+        
+        // Tenant name
         doc.fontSize(10)
            .font('Helvetica')
-           .text(tenantName || 'Non renseigné', 350, tenantInfoY + 15);
+           .text(tenantName || 'Non renseigné', rightAlignX, tenantY, {
+             width: rightAlignWidth,
+             align: 'right'
+           });
+        tenantY += 15;
         
-        // Update doc.y to continue from tenant info section
-        doc.y = tenantInfoY + 30;
-
-        doc.moveDown(2);
-
-        // Payment date (aligned right)
+        // Tenant email
+        if (tenantEmail && tenantEmail !== 'Non renseigné') {
+          doc.fontSize(10)
+             .font('Helvetica')
+             .text(`Email: ${tenantEmail}`, rightAlignX, tenantY, {
+               width: rightAlignWidth,
+               align: 'right'
+             });
+          tenantY += 15;
+        }
+        
+        // Tenant phone
+        if (tenantPhone && tenantPhone !== 'Non renseigné') {
+          doc.fontSize(10)
+             .font('Helvetica')
+             .text(`Téléphone: ${tenantPhone}`, rightAlignX, tenantY, {
+               width: rightAlignWidth,
+               align: 'right'
+             });
+          tenantY += 15;
+        }
+        
+        // Tenant address (if provided)
+        if (tenantAddress && tenantAddress !== 'Non renseigné') {
+          doc.fontSize(10)
+             .font('Helvetica')
+             .text(`Adresse: ${tenantAddress}`, rightAlignX, tenantY, {
+               width: rightAlignWidth,
+               align: 'right'
+             });
+          tenantY += 15;
+        }
+        
+        // Payment date (aligned right) - positioned right after tenant info
         const paymentDateText = frenchContent.paymentInfo.paymentDate;
         doc.fontSize(10)
            .font('Helvetica')
-           .text(paymentDateText, 350, doc.y);
-
-        doc.moveDown(1);
-
-        // Property location section removed as requested
+           .text(paymentDateText, rightAlignX, tenantY, {
+             width: rightAlignWidth,
+             align: 'right'
+           });
+        tenantY += 18;
+        
+        const tenantSectionHeight = tenantY - sectionStartY;
+        
+        // Update doc.y to continue from the bottom of the tallest section
+        const maxSectionHeight = Math.max(propertySectionHeight, tenantSectionHeight);
+        doc.y = sectionStartY + maxSectionHeight + 20;
 
         // Payment declaration text
         // Ensure tenant name is properly retrieved with fallback
