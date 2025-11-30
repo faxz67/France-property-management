@@ -228,7 +228,7 @@ const PaymentsManagement: React.FC = () => {
         return;
       }
 
-      const apiBaseURL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:4002/api';
+      const apiBaseURL = import.meta.env.VITE_API_BASE_URL || 'http://192.168.1.109:4002/api';
       
       // Test connectivity with a simple request
       const connectivityTest = await fetch(`${apiBaseURL}/bills`, {
@@ -1036,7 +1036,7 @@ const PaymentsManagement: React.FC = () => {
       }
 
       // Get API base URL
-      const apiBaseURL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:4002/api';
+      const apiBaseURL = import.meta.env.VITE_API_BASE_URL || 'http://192.168.1.109:4002/api';
       console.log('🌐 [SENIOR DEV] API Base URL:', apiBaseURL);
 
       // Test API connectivity first
@@ -1784,7 +1784,7 @@ const PaymentsManagement: React.FC = () => {
       }
       
       // Get the API base URL from the environment or use default
-      const apiBaseURL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:4002/api';
+      const apiBaseURL = import.meta.env.VITE_API_BASE_URL || 'http://192.168.1.109:4002/api';
       const downloadURL = `${apiBaseURL}/bills/${billId}/download`;
       
       console.log('📥 Downloading PDF from:', downloadURL);

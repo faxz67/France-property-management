@@ -2,7 +2,7 @@ require('dotenv').config({ path: '../.env' });
 const { Admin } = require('../models');
 const axios = require('axios');
 
-const API_BASE_URL = process.env.BACKEND_ORIGIN || 'http://localhost:4002';
+const API_BASE_URL = process.env.BACKEND_ORIGIN || 'http://192.168.1.109:4002';
 
 // Test credentials
 const testSuperAdminEmail = `test-super-admin-${Date.now()}@test.com`;

@@ -9,7 +9,7 @@
  */
 export const getBackendBaseUrl = (): string => {
   // Get from environment or use default
-  const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:4002/api';
+  const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://192.168.1.109:4002/api';
   return apiBaseUrl.replace('/api', '');
 };
 

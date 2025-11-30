@@ -8,7 +8,7 @@ const axios = require('axios');
 const { Admin } = require('../models');
 const { sequelize } = require('../config/database');
 
-const API_BASE_URL = process.env.BACKEND_ORIGIN || 'http://localhost:4002';
+const API_BASE_URL = process.env.BACKEND_ORIGIN || 'http://192.168.1.109:4002';
 const API_URL = `${API_BASE_URL}/api`;
 
 async function getSuperAdminToken() {

@@ -50,7 +50,7 @@ app.use(helmet({
       styleSrc: ["'self'", "'unsafe-inline'"],
       scriptSrc: ["'self'"],
       imgSrc: ["'self'", "data:", "http:", "https:", "blob:"],
-      connectSrc: ["'self'", "http://localhost:*", "https://localhost:*"],
+      connectSrc: ["'self'", "http://192.168.1.109:*", "http://localhost:*", "https://localhost:*"],
     },
   },
   crossOriginResourcePolicy: { policy: "cross-origin" }
@@ -82,7 +82,10 @@ app.use(session({
 // CORS configuration
 app.use(cors({
   origin: [
-    process.env.FRONTEND_URL || 'http://localhost:5174',
+    process.env.FRONTEND_URL || 'http://192.168.1.109:3000',
+    'http://192.168.1.109:3000',
+    'http://192.168.1.109:4002',
+    'http://localhost:3000',
     'http://localhost:5174',
     'http://localhost:4002'
   ],
@@ -596,9 +599,9 @@ const startServer = async () => {
       console.log('🚀 Property Management API Server');
       console.log('========================================');
       console.log(`📍 Status: Running`);
-      console.log(`🔗 URL: http://localhost:${PORT}`);
+      console.log(`🔗 URL: http://192.168.1.109:${PORT}`);
       console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
-      console.log(`🎯 Frontend URL: ${process.env.FRONTEND_URL || 'http://localhost:5174'}`);
+      console.log(`🎯 Frontend URL: ${process.env.FRONTEND_URL || 'http://192.168.1.109:3000'}`);
       console.log(`💾 Database Pool: Max ${process.env.NODE_ENV === 'production' ? '50' : '20'} connections`);
       console.log(`⚡ Rate Limit: ${process.env.RATE_LIMIT_MAX_REQUESTS || '2000'} requests per 15 minutes`);
       console.log('🔧 Multi-user support: ENABLED');

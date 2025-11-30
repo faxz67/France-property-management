@@ -10,8 +10,8 @@ export default defineConfig({
     })
   ],
   server: {
-    host: 'localhost',
-    port: 5174,
+    host: '0.0.0.0',
+    port: 3000,
     strictPort: true,
     allowedHosts: true,
   },
@@ -51,7 +51,7 @@ export default defineConfig({
     exclude: ['lucide-react']
   },
   define: {
-    'import.meta.env.VITE_API_BASE_URL': JSON.stringify('http://localhost:4002/api'),
+    'import.meta.env.VITE_API_BASE_URL': JSON.stringify('http://192.168.1.109:4002/api'),
   },
   // Enable CSS code splitting
   css: {

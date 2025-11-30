@@ -7,7 +7,7 @@
 
 export const API_CONFIG = {
   // Base URLs
-  BASE_URL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:4002/api',
+  BASE_URL: import.meta.env.VITE_API_BASE_URL || 'http://192.168.1.109:4002/api',
   
   // Timeouts (in milliseconds)
   TIMEOUT: {
