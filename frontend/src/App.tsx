@@ -1,0 +1,99 @@
+import React, { Suspense, lazy } from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import ErrorBoundary from './components/ErrorBoundary';
+import LoadingSpinner from './components/LoadingSpinner';
+import { LanguageProvider } from './contexts/LanguageContext';
+import './styles/smooth-animations.css';
+
+// Lazy load components for better performance
+const Login = lazy(() => import('./pages/Login'));
+const Dashboard = lazy(() => import('./pages/Dashboard'));
+const AdminManagement = lazy(() => import('./pages/AdminManagement'));
+
+function ProtectedRoute({ children }: { children: React.ReactElement }) {
+  const token = localStorage.getItem('token');
+  const userRaw = localStorage.getItem('user');
+  
+  // Debug logging
+  console.log('ProtectedRoute - Token:', token ? 'exists' : 'missing');
+  console.log('ProtectedRoute - User raw:', userRaw);
+  
+  // Safe JSON parsing
+  let user = null;
+  try {
+    if (userRaw && userRaw !== 'undefined' && userRaw !== 'null') {
+      user = JSON.parse(userRaw);
+      console.log('ProtectedRoute - Parsed user:', user);
+    }
+  } catch (error) {
+    console.error('Error parsing user data:', error);
+    localStorage.removeItem('user');
+    localStorage.removeItem('token');
+  }
+  
+  if (!token || !user) {
+    console.log('ProtectedRoute - Redirecting to login. Token:', !!token, 'User:', !!user);
+    return <Navigate to="/" replace />;
+  }
+  
+  console.log('ProtectedRoute - Access granted');
+  return children;
+}
+
+function SuperRoute({ children }: { children: React.ReactElement }) {
+  const token = localStorage.getItem('token');
+  const userRaw = localStorage.getItem('user');
+  
+  // Safe JSON parsing
+  let user = null;
+  try {
+    if (userRaw && userRaw !== 'undefined' && userRaw !== 'null') {
+      user = JSON.parse(userRaw);
+    }
+  } catch (error) {
+    console.error('Error parsing user data:', error);
+    localStorage.removeItem('user');
+    localStorage.removeItem('token');
+  }
+  
+  // Check for SUPER_ADMIN role (matching backend response)
+  if (!token || !user || user.role !== 'SUPER_ADMIN') {
+    return <Navigate to="/" replace />;
+  }
+  return children;
+}
+
+function App() {
+  return (
+    <LanguageProvider>
+      <Router>
+        <Suspense fallback={<LoadingSpinner />}>
+          <Routes>
+            <Route path="/" element={<Login />} />
+            <Route
+              path="/dashboard"
+              element={
+                <ProtectedRoute>
+                  <ErrorBoundary>
+                    <Dashboard />
+                  </ErrorBoundary>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin-management"
+              element={
+                <SuperRoute>
+                  <AdminManagement />
+                </SuperRoute>
+              }
+            />
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </Suspense>
+      </Router>
+    </LanguageProvider>
+  );
+}
+
+export default App;

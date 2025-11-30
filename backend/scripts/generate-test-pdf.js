@@ -94,8 +94,8 @@ async function generateTestPDF() {
     console.log(`   2. Open File Explorer and paste the path in the address bar`);
     console.log(`   3. Or use: start "" "${absolutePath}" (Windows)`);
     console.log(`\n📋 Or access via API:`);
-    console.log(`   GET http://192.168.1.109:4002/api/bills/${bill.id}/download`);
-    console.log(`   GET http://192.168.1.109:4002/api/test/download-pdf/${bill.id}?adminId=${bill.admin_id}\n`);
+    console.log(`   GET http://localhost:4002/api/bills/${bill.id}/download`);
+    console.log(`   GET http://localhost:4002/api/test/download-pdf/${bill.id}?adminId=${bill.admin_id}\n`);
 
     // Try to open the PDF automatically on Windows
     try {
